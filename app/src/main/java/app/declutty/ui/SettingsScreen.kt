@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -56,7 +57,7 @@ import app.declutty.UpdateState
 import app.declutty.ui.theme.DF
 
 @Composable
-fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onPhotos: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     fun open(intent: Intent) = runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     LazyColumn(Modifier.fillMaxSize().navigationBarsPadding(), contentPadding = PaddingValues(bottom = 32.dp)) {
@@ -86,9 +87,10 @@ fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onBack: () -> Unit) 
                 if (vm.usageAccess) "Attivo: ultimo utilizzo e spazio reale delle app" else "Spento: tocca per attivarlo", 2,
             ) { open(vm.apps.usageAccessIntent()) }
         }
-        item { SettingRow(Icons.Rounded.VisibilityOff, "App nascoste", if (vm.hidden.isEmpty()) "Nessuna" else plural(vm.hidden.size, "app nascosta", "app nascoste"), 3, onHidden) }
+        if (vm.photos != null) item { SettingRow(Icons.Rounded.PhotoLibrary, "Foto simili", "Somiglianza, periodo ed eliminazione", 3, onPhotos) }
+        item { SettingRow(Icons.Rounded.VisibilityOff, "App nascoste", if (vm.hidden.isEmpty()) "Nessuna" else plural(vm.hidden.size, "app nascosta", "app nascoste"), 4, onHidden) }
         item {
-            SettingRow(Icons.Rounded.Code, "Codice sorgente", "github.com/${BuildConfig.GITHUB_REPO}", 4) {
+            SettingRow(Icons.Rounded.Code, "Codice sorgente", "github.com/${BuildConfig.GITHUB_REPO}", 5) {
                 open(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}")))
             }
         }

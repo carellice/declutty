@@ -1,5 +1,6 @@
 package app.declutty.ui
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -81,6 +83,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     HOME("Panoramica", Icons.Rounded.AutoAwesome),
     APPS("App", Icons.Rounded.Apps),
     CATEGORIES("Categorie", Icons.Rounded.Category),
+    PHOTOS("Foto", Icons.Rounded.PhotoLibrary),
     CONTACTS("Contatti", Icons.Rounded.Contacts),
 }
 
@@ -89,6 +92,16 @@ sealed interface Page {
     data class CategoryApps(val category: Category) : Page
     data object Settings : Page
     data object Hidden : Page
+    data class PhotoGroup(val id: Long) : Page
+    data class PhotoSettings(val fromSettings: Boolean) : Page
+}
+
+/** Profondità di una schermata: decide se la transizione va avanti o indietro. */
+private fun Page?.depth() = when (this) {
+    null -> 0
+    Page.Hidden -> 2
+    is Page.PhotoSettings -> if (fromSettings) 2 else 1
+    else -> 1
 }
 
 @Composable
@@ -99,7 +112,12 @@ fun DeclutApp(vm: MainViewModel) {
     LifecycleResumeEffect(Unit) { vm.onResume(); onPauseOrDispose { } }
 
     BackHandler(page != null || tab != Tab.HOME) {
-        page = when (page) { Page.Hidden -> Page.Settings; null -> { tab = Tab.HOME; null }; else -> null }
+        page = when (val p = page) {
+            Page.Hidden -> Page.Settings
+            is Page.PhotoSettings -> if (p.fromSettings) Page.Settings else null
+            null -> { tab = Tab.HOME; null }
+            else -> null
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -110,10 +128,10 @@ fun DeclutApp(vm: MainViewModel) {
                 val (fromPage, fromTab) = initialState
                 val (toPage, toTab) = targetState
                 when {
-                    toPage != null && fromPage == null || toPage == Page.Hidden ->
+                    toPage.depth() > fromPage.depth() ->
                         (slideInHorizontally(tween(420, easing = Motion.Reveal)) { it / 3 } + fadeIn(tween(300))) togetherWith
                             (fadeOut(tween(200)) + scaleOut(tween(300), 0.94f))
-                    toPage == null && fromPage != null || fromPage == Page.Hidden ->
+                    toPage.depth() < fromPage.depth() ->
                         (fadeIn(tween(300)) + scaleIn(tween(360, easing = Motion.Reveal), 0.94f)) togetherWith
                             (slideOutHorizontally(tween(320)) { it / 3 } + fadeOut(tween(220)))
                     else -> {
@@ -127,18 +145,29 @@ fun DeclutApp(vm: MainViewModel) {
         ) { (p, t) ->
             when (p) {
                 is Page.CategoryApps -> CategoryAppsScreen(vm, p.category) { page = null }
-                Page.Settings -> SettingsScreen(vm, onHidden = { page = Page.Hidden }) { page = null }
+                Page.Settings -> SettingsScreen(vm, onHidden = { page = Page.Hidden }, onPhotos = { page = Page.PhotoSettings(true) }) { page = null }
                 Page.Hidden -> HiddenScreen(vm) { page = Page.Settings }
+                is Page.PhotoGroup -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { PhotoGroupScreen(it, p.id) { page = null } }
+                is Page.PhotoSettings -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let {
+                    PhotoSettingsScreen(it) { page = if (p.fromSettings) Page.Settings else null }
+                }
                 null -> when (t) {
                     Tab.HOME -> HomeScreen(
                         vm,
                         openSettings = { page = Page.Settings },
                         openApps = { sortBySize -> unusedFilter = !sortBySize; tab = Tab.APPS },
                         openContacts = { tab = Tab.CONTACTS },
+                        openPhotos = { tab = Tab.PHOTOS },
                         openCategory = { page = Page.CategoryApps(it) },
                     )
                     Tab.APPS -> AppsScreen(vm, unusedFilter) { unusedFilter = it }
                     Tab.CATEGORIES -> CategoriesScreen(vm) { page = Page.CategoryApps(it) }
+                    Tab.PHOTOS -> {
+                        val photos = vm.photos
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && photos != null) {
+                            PhotosScreen(photos, openGroup = { page = Page.PhotoGroup(it) }, openSettings = { page = Page.PhotoSettings(false) })
+                        } else PhotosUnsupported()
+                    }
                     Tab.CONTACTS -> ContactsScreen(vm)
                 }
             }
@@ -153,6 +182,7 @@ fun DeclutApp(vm: MainViewModel) {
 
         Toast(vm.message, Modifier.align(Alignment.TopCenter)) { vm.message = null }
         UninstallOverlay(vm)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { PhotoDoneOverlay(it) { page = null; tab = Tab.PHOTOS } }
     }
 }
 
@@ -292,7 +322,7 @@ private fun UninstallDone(run: app.declutty.UninstallRun, onClose: () -> Unit) {
 
 /** Scintille che esplodono dal centro una volta sola. */
 @Composable
-private fun Burst(modifier: Modifier, content: @Composable () -> Unit) {
+internal fun Burst(modifier: Modifier, content: @Composable () -> Unit) {
     val p = remember { Animatable(0f) }
     val pop = remember { Animatable(0.3f) }
     LaunchedEffect(Unit) {

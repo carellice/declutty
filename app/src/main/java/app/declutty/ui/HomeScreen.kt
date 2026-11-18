@@ -3,6 +3,7 @@ package app.declutty.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Storage
@@ -67,6 +70,7 @@ fun HomeScreen(
     openSettings: () -> Unit,
     openApps: (sortBySize: Boolean) -> Unit,
     openContacts: () -> Unit,
+    openPhotos: () -> Unit,
     openCategory: (Category) -> Unit,
 ) {
     val context = LocalContext.current
@@ -116,6 +120,17 @@ fun HomeScreen(
                     Icons.Rounded.People, vm.contacts?.let { "${vm.duplicates.size}" } ?: "—",
                     if (vm.contacts == null) "Doppioni: tocca per cercarli" else "Gruppi di doppioni", 4, Modifier.weight(1f), onClick = openContacts,
                 )
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { p ->
+            item {
+                Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatCard(
+                        Icons.Rounded.PhotoLibrary, p.groups?.size?.toString() ?: "—",
+                        "Gruppi di foto simili", 5, Modifier.weight(1f), onClick = openPhotos,
+                    )
+                    StatCard(Icons.Rounded.Savings, formatSize(p.freedBytes), "Liberati dalle foto", 6, Modifier.weight(1f), onClick = openPhotos)
+                }
             }
         }
         if (!vm.usageAccess) item { UsageAccessCard(context, vm, Modifier.padding(horizontal = 20.dp, vertical = 8.dp).reveal(5)) }

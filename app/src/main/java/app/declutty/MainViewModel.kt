@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -65,6 +66,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var update by mutableStateOf<UpdateState>(UpdateState.Idle); private set
     var message by mutableStateOf<String?>(null)
 
+    /** Foto simili: serve Android 11 (cestino e conferma di eliminazione di MediaStore). */
+    val photos: PhotoCleaner? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) PhotoCleaner(app, viewModelScope) { message = it } else null
+
     /** App mostrate in Declutty: tutte tranne quelle nascoste. */
     val visibleApps: List<AppItem> get() = allApps.filter { it.pkg !in hidden }
 
@@ -79,6 +83,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Con l'accesso ai dati di utilizzo arrivano ultimo utilizzo e spazio reale: ricarica.
         if (access != usageAccess) { usageAccess = access; refreshApps() }
         if (contacts == null && hasContactsPermission()) refreshContacts()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) photos?.refreshCount()
     }
 
     fun refreshApps() = viewModelScope.launch {
