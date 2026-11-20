@@ -38,10 +38,12 @@ import kotlinx.coroutines.delay
 // Primitive dello stile Modern UI (Windows Phone): angoli vivi, piastrelle piatte, tilt e turnstile.
 
 /** Angoli arrotondati negli altri stili, vivi in Metro. */
-fun rounded(size: Dp): Shape = if (Metro.on) RectangleShape else RoundedCornerShape(size)
+// Nothing: le card non superano 16dp di raggio.
+fun rounded(size: Dp): Shape = if (Metro.on) RectangleShape else RoundedCornerShape(if (app.declutty.ui.theme.Nd.on) minOf(size, 16.dp) else size)
 
 fun rounded(topStart: Dp = 0.dp, topEnd: Dp = 0.dp): Shape =
-    if (Metro.on) RectangleShape else RoundedCornerShape(topStart = topStart, topEnd = topEnd)
+    if (Metro.on) RectangleShape else if (app.declutty.ui.theme.Nd.on) RoundedCornerShape(topStart = minOf(topStart, 16.dp), topEnd = minOf(topEnd, 16.dp))
+    else RoundedCornerShape(topStart = topStart, topEnd = topEnd)
 
 /** Le tinte accento di Windows Phone, una per categoria. */
 val MetroPalette = listOf(

@@ -219,7 +219,7 @@ private fun ContactAvatar(vm: MainViewModel, c: ContactItem, size: Dp) {
 @Composable
 private fun ContactRow(vm: MainViewModel, c: ContactItem, selected: Boolean, index: Int, modifier: Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) DF.Primary.copy(alpha = 0.12f) else Color.Transparent, tween(240), label = "bg")
-    val border by animateColorAsState(if (selected) DF.Primary.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "border")
+    val border by animateColorAsState(if (selected && app.declutty.ui.theme.Nd.on) DF.LineStrong else if (selected) DF.Primary.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "border")
     val shape = rounded(22.dp)
     Row(
         modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)

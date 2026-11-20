@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -183,7 +184,7 @@ private fun SettingRow(icon: ImageVector, title: String, subtitle: String, index
             .clip(rounded(22.dp)).padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(42.dp).clip(rounded(14.dp)).background(if (Metro.on) DF.Primary else DF.Surface), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(42.dp).clip(rounded(14.dp)).background(if (Metro.on) DF.Primary else DF.Surface).then(if (app.declutty.ui.theme.Nd.on) Modifier.border(1.dp, DF.Line, rounded(14.dp)) else Modifier), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = if (Metro.on) DF.OnPrimary else DF.Primary, modifier = Modifier.size(21.dp))
         }
         Spacer(Modifier.width(14.dp))

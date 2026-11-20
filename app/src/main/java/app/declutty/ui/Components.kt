@@ -100,6 +100,11 @@ import app.declutty.ui.theme.DisplayFont
 import app.declutty.ui.theme.Motion
 import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Metro
+import app.declutty.ui.theme.Nd
+import app.declutty.ui.theme.NdColor
+import app.declutty.ui.theme.MonoFont
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -116,6 +121,16 @@ fun Modifier.pressScale(pressedScale: Float = 0.95f, onLongClick: (() -> Unit)? 
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     if (Metro.on) return@composed tilt(source, pressed).combinedClickable(interactionSource = source, indication = null, onLongClick = onLongClick, onClick = onClick)
+    if (Nd.on) {
+        // Nothing: percussivo, non fluido. Si spegne un attimo e dà un tick aptico, niente molla.
+        val haptic = LocalHapticFeedback.current
+        val a by animateFloatAsState(if (pressed) 0.5f else 1f, tween(if (pressed) 60 else 180, easing = Motion.Nd), label = "ndPress")
+        return@composed graphicsLayer { alpha = a }.combinedClickable(
+            interactionSource = source, indication = null,
+            onLongClick = onLongClick?.let { l -> { haptic.performHapticFeedback(HapticFeedbackType.LongPress); l() } },
+            onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onClick() },
+        )
+    }
     val scale by animateFloatAsState(
         if (pressed) pressedScale else 1f,
         spring(dampingRatio = if (pressed) 1f else 0.42f, stiffness = if (pressed) 900f else 380f),
@@ -148,8 +163,9 @@ fun Modifier.reveal(index: Int, step: Long = 45): Modifier = composed {
     val p = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay(index.coerceAtMost(12) * step)
-        p.animateTo(1f, tween(if (Metro.on) 420 else 560, easing = Motion.Letter))
+        p.animateTo(1f, if (Nd.on) tween(300, easing = Motion.Nd) else tween(if (Metro.on) 420 else 560, easing = Motion.Letter))
     }
+    if (Nd.on) return@composed graphicsLayer { alpha = p.value } // Nothing: dissolvenza, niente scivolamenti
     if (Metro.on) return@composed graphicsLayer {
         alpha = p.value
         rotationY = (1f - p.value) * -70f
@@ -168,6 +184,7 @@ fun Modifier.reveal(index: Int, step: Long = 45): Modifier = composed {
 fun Modifier.shimmer(): Modifier = composed {
     val t = rememberInfiniteTransition(label = "shimmer")
     val x by t.animateFloat(-1f, 2f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "x")
+    if (Nd.on) return@composed drawBehind { drawRect(DF.SurfaceHigh) } // Nothing: niente skeleton che luccicano
     drawBehind {
         val w = size.width
         drawRect(Brush.linearGradient(listOf(DF.SurfaceHigh, DF.SurfaceHigher, DF.SurfaceHigh), start = Offset(w * x - w, 0f), end = Offset(w * x, size.height)))
@@ -179,6 +196,7 @@ fun Modifier.shimmer(): Modifier = composed {
 fun AuroraBackground(modifier: Modifier = Modifier) {
     if (Skeu.on) return LeatherDesk(modifier)
     if (Metro.on) return Box(modifier.fillMaxSize().background(DF.Bg))
+    if (Nd.on) return DotGrid(modifier)
     val t = rememberInfiniteTransition(label = "aurora")
     val a by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(36_000, easing = LinearEasing)), label = "a")
     Canvas(modifier.fillMaxSize()) {
@@ -220,13 +238,14 @@ fun DfChip(text: String, selected: Boolean, modifier: Modifier = Modifier, icon:
     val border by animateColorAsState(if (selected) DF.Primary else DF.Line, tween(260), label = "chipBorder")
     Row(
         modifier.pressScale(0.92f, onClick = onClick)
-            .then(if (Metro.on) Modifier.background(bg).border(2.dp, if (selected) DF.Primary else DF.Muted, RectangleShape) else if (!Skeu.on) Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape) else if (selected) Modifier.gel(CircleShape, DF.PrimaryStrong) else Modifier.leatherPanel(CircleShape, DF.SurfaceHigh, stitched = false, depth = 2.dp))
+            .then(if (Nd.on) Modifier.clip(CircleShape).background(if (selected) NdColor.Display else Color.Transparent).border(1.dp, if (selected) NdColor.Display else DF.LineStrong, CircleShape)
+            else if (Metro.on) Modifier.background(bg).border(2.dp, if (selected) DF.Primary else DF.Muted, RectangleShape) else if (!Skeu.on) Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape) else if (selected) Modifier.gel(CircleShape, DF.PrimaryStrong) else Modifier.leatherPanel(CircleShape, DF.SurfaceHigh, stitched = false, depth = 2.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
-        Text(text, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
+        Text(text.caps(), style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
     }
 }
 
@@ -239,12 +258,13 @@ fun MintButton(
     danger: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val shape = rounded(18.dp)
+    val shape = if (Nd.on) CircleShape else rounded(18.dp)
     val accent = if (danger) DF.Error else DF.Primary
     Row(
         modifier.pressScale(0.95f, onClick = onClick).clip(shape)
             .then(
-                if (Metro.on) { if (filled) Modifier.background(accent) else Modifier.border(2.dp, DF.Text, shape) }
+                if (Nd.on) { if (danger) Modifier.border(1.dp, NdColor.Accent, shape) else if (filled) Modifier.background(NdColor.Display) else Modifier.border(1.dp, DF.LineStrong, shape) }
+                else if (Metro.on) { if (filled) Modifier.background(accent) else Modifier.border(2.dp, DF.Text, shape) }
                 else if (Skeu.on) { if (filled) Modifier.gel(shape, if (danger) Color(0xFFB8402E) else DF.PrimaryStrong) else Modifier.leatherPanel(shape, DF.SurfaceHigh, stitched = false, depth = 2.5.dp) }
                 else if (filled) Modifier.background(Brush.linearGradient(listOf(accent, if (danger) Color(0xFFFF6B5B) else DF.PrimaryStrong)))
                 else Modifier.background(DF.Surface).border(1.dp, DF.LineStrong, shape),
@@ -253,12 +273,12 @@ fun MintButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        val fg = if (filled) DF.OnPrimary else DF.Text // skeu: OnPrimary è bianco, leggibile sul gel scuro
+        val fg = if (Nd.on && danger) NdColor.Accent else if (filled) DF.OnPrimary else DF.Text // skeu: OnPrimary è bianco, leggibile sul gel scuro
         if (icon != null) {
             Icon(icon, null, tint = fg, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), color = fg, maxLines = 1)
+        Text(text.caps(), style = if (Nd.on) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), color = fg, maxLines = 1)
     }
 }
 
@@ -270,7 +290,8 @@ fun CardSurface(
     content: @Composable () -> Unit,
 ) {
     Box(
-        (if (Metro.on) modifier.background(DF.Surface) else if (Skeu.on) modifier.leatherPanel(shape) else modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape))
+        (if (Nd.on) modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape)
+        else if (Metro.on) modifier.background(DF.Surface) else if (Skeu.on) modifier.leatherPanel(shape) else modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape))
             .padding(padding),
     ) { content() }
 }
@@ -278,8 +299,9 @@ fun CardSurface(
 @Composable
 fun Pill(text: String, modifier: Modifier = Modifier, color: Color = DF.Primary) {
     Text(
-        text,
-        (if (Metro.on) modifier.background(color.copy(alpha = 0.2f)) else if (Skeu.on) modifier.inset(CircleShape, Color.Black.copy(alpha = 0.35f)) else modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape))
+        text.caps(),
+        (if (Nd.on) modifier.clip(CircleShape).border(1.dp, color.copy(alpha = 0.5f), CircleShape)
+        else if (Metro.on) modifier.background(color.copy(alpha = 0.2f)) else if (Skeu.on) modifier.inset(CircleShape, Color.Black.copy(alpha = 0.35f)) else modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape))
             .padding(horizontal = 9.dp, vertical = 3.dp),
         style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
@@ -290,9 +312,10 @@ fun Pill(text: String, modifier: Modifier = Modifier, color: Color = DF.Primary)
 fun ScreenHeader(title: String, subtitle: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(if (Metro.on) title.lowercase() else title, style = MaterialTheme.typography.displayMedium, color = DF.Text, maxLines = if (Metro.on) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
-            AnimatedContent(subtitle, transitionSpec = { (fadeIn(tween(220)) + slideInVertically { it / 2 }) togetherWith fadeOut(tween(150)) }, label = "sub") {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = DF.Muted)
+            Text(if (Metro.on) title.lowercase() else title, style = MaterialTheme.typography.displayMedium, color = if (Nd.on) NdColor.Display else DF.Text, maxLines = if (Metro.on || Nd.on) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+            if (Nd.on) Spacer(Modifier.height(6.dp))
+            AnimatedContent(subtitle, transitionSpec = { if (Nd.on) fadeIn(tween(200)) togetherWith fadeOut(tween(120)) else (fadeIn(tween(220)) + slideInVertically { it / 2 }) togetherWith fadeOut(tween(150)) }, label = "sub") {
+                Text(it.caps(), style = if (Nd.on) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium, color = DF.Muted)
             }
         }
         trailing?.invoke()
@@ -303,9 +326,10 @@ fun ScreenHeader(title: String, subtitle: String, modifier: Modifier = Modifier,
 fun RoundIconButton(icon: ImageVector, description: String, modifier: Modifier = Modifier, tint: Color = DF.Text, onClick: () -> Unit) {
     Box(
         modifier.pressScale(0.88f, onClick = onClick).size(44.dp)
-            .then(if (Metro.on) Modifier.border(2.dp, DF.Text, CircleShape) else if (Skeu.on) Modifier.brass(CircleShape) else Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape)),
+            .then(if (Nd.on) Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.LineStrong, CircleShape)
+            else if (Metro.on) Modifier.border(2.dp, DF.Text, CircleShape) else if (Skeu.on) Modifier.brass(CircleShape) else Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape)),
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, description, tint = if (Skeu.on) Color(0xFF3A2610) else tint, modifier = Modifier.size(21.dp)) }
+    ) { Icon(icon, description, tint = if (Skeu.on) Color(0xFF3A2610) else tint, modifier = Modifier.size(if (Nd.on) 19.dp else 21.dp)) }
 }
 
 @Composable
@@ -316,17 +340,19 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, 
     val muted = if (Metro.on) Color(0xFF666666) else DF.Muted
     Row(
         modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            .then(if (Metro.on) Modifier.background(Color(0xFFDDDDDD)) else if (Skeu.on) Modifier.inset(shape) else Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape))
+            .then(if (Nd.on) Modifier.drawBehind { drawRect(DF.LineStrong, Offset(0f, size.height - 1.dp.toPx()), androidx.compose.ui.geometry.Size(size.width, 1.dp.toPx())) }
+            else if (Metro.on) Modifier.background(Color(0xFFDDDDDD)) else if (Skeu.on) Modifier.inset(shape) else Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Rounded.Search, null, tint = muted, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = muted)
+            val style = if (Nd.on) MaterialTheme.typography.bodyLarge.copy(fontFamily = MonoFont, fontSize = 15.sp) else MaterialTheme.typography.bodyLarge
+            if (value.isEmpty()) Text(if (Nd.on) placeholder.uppercase() else placeholder, style = if (Nd.on) MaterialTheme.typography.labelLarge else style, color = if (Nd.on) NdColor.Disabled else muted)
             BasicTextField(
-                value, onChange, singleLine = true, cursorBrush = SolidColor(DF.Primary),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = text), modifier = Modifier.fillMaxWidth(),
+                value, onChange, singleLine = true, cursorBrush = SolidColor(if (Nd.on) NdColor.Accent else DF.Primary),
+                textStyle = style.copy(color = text), modifier = Modifier.fillMaxWidth(),
             )
         }
         if (value.isNotEmpty()) Icon(Icons.Rounded.Close, "Cancella", tint = muted, modifier = Modifier.size(20.dp).pressScale(0.8f) { onChange("") })
@@ -336,16 +362,17 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, 
 /** Cerchio di selezione: si riempie con un rimbalzo e disegna la spunta. */
 @Composable
 fun SelectCheck(selected: Boolean, modifier: Modifier = Modifier) {
-    val p by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "check")
+    val p by animateFloatAsState(if (selected) 1f else 0f, if (Nd.on) tween(150, easing = Motion.Nd) else spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "check")
     Box(modifier.size(26.dp), contentAlignment = Alignment.Center) {
-        if (Metro.on) Box(Modifier.fillMaxSize().border(2.dp, if (selected) DF.Primary else DF.Text, RectangleShape))
+        if (Nd.on) Box(Modifier.fillMaxSize().clip(CircleShape).border(1.dp, if (selected) NdColor.Display else DF.LineStrong, CircleShape))
+        else if (Metro.on) Box(Modifier.fillMaxSize().border(2.dp, if (selected) DF.Primary else DF.Text, RectangleShape))
         else if (Skeu.on) Box(Modifier.fillMaxSize().inset(CircleShape, Color.Black.copy(alpha = 0.4f)))
         else Box(Modifier.fillMaxSize().clip(CircleShape).border(1.6.dp, if (selected) DF.Primary else DF.LineStrong, CircleShape))
         Box(
             Modifier.fillMaxSize().graphicsLayer { scaleX = p; scaleY = p; alpha = p.coerceIn(0f, 1f) }
-                .then(if (Metro.on) Modifier.background(DF.Primary) else if (Skeu.on) Modifier.gel(CircleShape, DF.PrimaryStrong, 1.5.dp) else Modifier.clip(CircleShape).background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong)))),
+                .then(if (Nd.on) Modifier.clip(CircleShape).background(NdColor.Display) else if (Metro.on) Modifier.background(DF.Primary) else if (Skeu.on) Modifier.gel(CircleShape, DF.PrimaryStrong, 1.5.dp) else Modifier.clip(CircleShape).background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong)))),
             contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Rounded.Check, null, tint = DF.OnPrimary, modifier = Modifier.size(17.dp).graphicsLayer { rotationZ = (1f - p) * -40f }) }
+        ) { Icon(Icons.Rounded.Check, null, tint = DF.OnPrimary, modifier = Modifier.size(17.dp).graphicsLayer { if (!Nd.on) rotationZ = (1f - p) * -40f }) }
     }
 }
 
@@ -354,7 +381,7 @@ fun SelectCheck(selected: Boolean, modifier: Modifier = Modifier) {
 fun AnimatedNumber(text: String, style: androidx.compose.ui.text.TextStyle, color: Color = DF.Text, modifier: Modifier = Modifier) {
     AnimatedContent(
         text, modifier,
-        transitionSpec = { (slideInVertically(spring(0.7f, 400f)) { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
+        transitionSpec = { if (Nd.on) fadeIn(tween(150)) togetherWith fadeOut(tween(100)) else (slideInVertically(spring(0.7f, 400f)) { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
         label = "num",
     ) { Text(it, style = style, color = color, maxLines = 1) }
 }
@@ -377,14 +404,15 @@ fun Monogram(name: String, size: Dp) {
     val hue = (abs(name.hashCode()) % 360).toFloat()
     Box(
         Modifier.fillMaxSize().background(
-            if (Metro.on) SolidColor(MetroPalette[abs(name.hashCode()) % MetroPalette.size])
+            if (Nd.on) SolidColor(DF.SurfaceHigh)
+            else if (Metro.on) SolidColor(MetroPalette[abs(name.hashCode()) % MetroPalette.size])
             else Brush.linearGradient(listOf(Color.hsv(hue, 0.45f, 0.55f), Color.hsv((hue + 40f) % 360f, 0.6f, 0.25f))),
         ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             name.trim().firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "#",
-            fontFamily = if (Metro.on) FontFamily.SansSerif else DisplayFont, fontWeight = if (Metro.on) FontWeight.Light else FontWeight.ExtraBold, fontSize = (size.value * 0.44f).sp, color = DF.Text,
+            fontFamily = if (Nd.on) MonoFont else if (Metro.on) FontFamily.SansSerif else DisplayFont, fontWeight = if (Metro.on) FontWeight.Light else if (Nd.on) FontWeight.Normal else FontWeight.ExtraBold, fontSize = (size.value * 0.44f).sp, color = DF.Text,
         )
     }
 }
@@ -393,17 +421,19 @@ fun Monogram(name: String, size: Dp) {
 fun ConfirmDialog(title: String, text: String, confirm: String, danger: Boolean = false, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DF.SurfaceHigh,
+        modifier = if (Nd.on) Modifier.border(1.dp, DF.LineStrong, rounded(16.dp)) else Modifier,
+        containerColor = if (Nd.on) DF.Surface else DF.SurfaceHigh,
+        tonalElevation = 0.dp,
         shape = rounded(28.dp),
         title = { Text(title, style = MaterialTheme.typography.headlineSmall, color = DF.Text) },
         text = { Text(text, style = MaterialTheme.typography.bodyMedium, color = DF.Muted) },
         confirmButton = {
             if (Metro.on) MintButton(confirm.lowercase(), null, filled = false) { onDismiss(); onConfirm() }
-            else TextButton(onClick = { onDismiss(); onConfirm() }) { Text(confirm, color = if (danger) DF.Error else DF.Primary, style = MaterialTheme.typography.labelLarge) }
+            else TextButton(onClick = { onDismiss(); onConfirm() }) { Text(confirm.caps(), color = if (danger) DF.Error else DF.Primary, style = MaterialTheme.typography.labelLarge) }
         },
         dismissButton = {
             if (Metro.on) MintButton("annulla", null, filled = false, onClick = onDismiss)
-            else TextButton(onClick = onDismiss) { Text("Annulla", color = DF.Muted, style = MaterialTheme.typography.labelLarge) }
+            else TextButton(onClick = onDismiss) { Text("Annulla".caps(), color = DF.Muted, style = MaterialTheme.typography.labelLarge) }
         },
     )
 }
@@ -431,7 +461,8 @@ fun Category.icon(): ImageVector = when (this) {
 }
 
 /** Ogni categoria ha una tinta sua, sempre chiara e satura come l'accento. */
-fun Category.color(): Color = if (Metro.on) MetroPalette[ordinal % MetroPalette.size] else Color.hsv((152f + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
+// Nothing: monocromo, le categorie si distinguono per icona e posizione, non per colore.
+fun Category.color(): Color = if (Nd.on) DF.Text else if (Metro.on) MetroPalette[ordinal % MetroPalette.size] else Color.hsv((152f + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
 
 // ---------- Formati ----------
 

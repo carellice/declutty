@@ -26,6 +26,7 @@ enum class UiStyle(val label: String, val hint: String) {
     MODERN("Moderno", "Menta su fondo scuro"),
     SKEU("Skeuomorfico", "Pelle, ottone e bottoni in gel"),
     METRO("Modern UI", "Piastrelle e tipografia, come Windows Phone"),
+    NOTHING("Nothing", "Nero OLED, matrice a punti e un solo rosso"),
 }
 
 /** Stile in uso, letto all'avvio e cambiato dalle impostazioni. */
@@ -41,37 +42,54 @@ object Metro {
     val on get() = Ui.style == UiStyle.METRO
 }
 
-private fun c(dueffe: Long, skeu: Long, metro: Long) = Color(
+/** Stile Nothing (design system di dominikmartn/nothing-design-skill). `Nothing` è un tipo Kotlin, da qui Nd. */
+object Nd {
+    val on get() = Ui.style == UiStyle.NOTHING
+}
+
+private fun c(dueffe: Long, skeu: Long, metro: Long, nd: Long) = Color(
     when (Ui.style) {
         UiStyle.MODERN -> dueffe
         UiStyle.SKEU -> skeu
         UiStyle.METRO -> metro
+        UiStyle.NOTHING -> nd
     },
 )
 
-/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. Metro: nero puro e accento teal piatto. */
+/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. Metro: nero puro e accento teal piatto. Nothing: monocromo OLED, rosso #D71921 solo per gli allarmi. */
 object DF {
-    val Bg get() = c(0xFF050706, 0xFF24180F, 0xFF000000)
-    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B, 0xFF0A0A0A)
-    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C, 0xFF1F1F1F)
-    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34, 0xFF262626)
-    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13, 0xFF333333)
-    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6, 0xFFFFFFFF)
-    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E, 0xFF9A9A9A)
-    val Line get() = c(0x2980FFD0, 0x40E8D2B0, 0x33FFFFFF)
-    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0, 0xFFFFFFFF)
-    val Primary get() = c(0xFF5CF2B8, 0xFF62D394, 0xFF00ABA9)
-    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A, 0xFF00ABA9)
-    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579, 0xFF7FD5D4)
-    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF, 0xFFFFFFFF)
-    val Error get() = c(0xFFFF8F80, 0xFFF0806A, 0xFFE51400)
-    val Nav get() = c(0xFF080B0A, 0xFF120C08, 0xFF1F1F1F)
+    val Bg get() = c(0xFF050706, 0xFF24180F, 0xFF000000, 0xFF000000)
+    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B, 0xFF0A0A0A, 0xFF000000)
+    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C, 0xFF1F1F1F, 0xFF111111)
+    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34, 0xFF262626, 0xFF1A1A1A)
+    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13, 0xFF333333, 0xFF222222)
+    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6, 0xFFFFFFFF, 0xFFE8E8E8)
+    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E, 0xFF9A9A9A, 0xFF999999)
+    val Line get() = c(0x2980FFD0, 0x40E8D2B0, 0x33FFFFFF, 0xFF222222)
+    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0, 0xFFFFFFFF, 0xFF333333)
+    val Primary get() = c(0xFF5CF2B8, 0xFF62D394, 0xFF00ABA9, 0xFFFFFFFF)
+    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A, 0xFF00ABA9, 0xFFFFFFFF)
+    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579, 0xFF7FD5D4, 0xFF999999)
+    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF000000)
+    val Error get() = c(0xFFFF8F80, 0xFFF0806A, 0xFFE51400, 0xFFD71921)
+    val Nav get() = c(0xFF080B0A, 0xFF120C08, 0xFF1F1F1F, 0xFF000000)
+}
+
+/** Nothing: bianco pieno per il dato principale, rosso segnale per ciò che è urgente. */
+object NdColor {
+    val Display = Color(0xFFFFFFFF)
+    val Disabled = Color(0xFF666666)
+    val Accent = Color(0xFFD71921)
+    val Success = Color(0xFF4A9E5C)
+    val Warning = Color(0xFFD4A843)
 }
 
 object Motion {
     val Reveal = CubicBezierEasing(.22f, .78f, .16f, 1f)
     val Letter = CubicBezierEasing(.16f, .86f, .24f, 1f)
     val Standard = CubicBezierEasing(.4f, 0f, .2f, 1f)
+    /** Nothing: ease-out sobrio, niente molle né rimbalzi. */
+    val Nd = CubicBezierEasing(.25f, .1f, .25f, 1f)
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -79,6 +97,17 @@ private fun bricolage(weight: Int) = Font(R.font.bricolage, FontWeight(weight), 
 
 @OptIn(ExperimentalTextApi::class)
 private fun inter(weight: Int) = Font(R.font.inter, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+@OptIn(ExperimentalTextApi::class)
+private fun grotesk(weight: Int) = Font(R.font.spacegrotesk, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+@OptIn(ExperimentalTextApi::class)
+private fun doto(weight: Int) = Font(R.font.doto, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+/** Nothing: Doto (matrice a punti) solo per i numeri grandi, Space Grotesk per il testo, Space Mono per etichette e dati. */
+val DotoFont = FontFamily(doto(400), doto(700))
+val GroteskFont = FontFamily(grotesk(300), grotesk(400), grotesk(500), grotesk(700))
+val MonoFont = FontFamily(Font(R.font.spacemono, FontWeight.Normal), Font(R.font.spacemono_bold, FontWeight.Bold))
 
 val DisplayFont = FontFamily(bricolage(400), bricolage(500), bricolage(600), bricolage(700), bricolage(800))
 val BodyFont = FontFamily(inter(400), inter(500), inter(600), inter(700))
@@ -128,6 +157,28 @@ private val metroType = dueffeType.run {
     )
 }
 
+private fun ts(f: FontFamily, size: Int, line: Float, track: Double, w: FontWeight = FontWeight.Normal) =
+    TextStyle(fontFamily = f, fontWeight = w, fontSize = size.sp, lineHeight = (size * line).sp, letterSpacing = track.em)
+
+/** Scala tipografica del design system Nothing: Doto da 36 in su, etichette Space Mono spaziate. */
+private val ndType = Typography(
+    displayLarge = ts(DotoFont, 72, 1f, -0.03, FontWeight.Bold),
+    displayMedium = ts(DotoFont, 44, 1.05f, -0.02, FontWeight.Bold),
+    displaySmall = ts(GroteskFont, 30, 1.15f, -0.02),
+    headlineLarge = ts(GroteskFont, 32, 1.1f, -0.02),
+    headlineMedium = ts(GroteskFont, 24, 1.2f, -0.01),
+    headlineSmall = ts(GroteskFont, 20, 1.25f, -0.01),
+    titleLarge = ts(GroteskFont, 18, 1.3f, 0.0, FontWeight.Medium),
+    titleMedium = ts(GroteskFont, 16, 1.3f, 0.0, FontWeight.Medium),
+    titleSmall = ts(GroteskFont, 14, 1.35f, 0.0, FontWeight.Medium),
+    bodyLarge = ts(GroteskFont, 16, 1.5f, 0.0),
+    bodyMedium = ts(GroteskFont, 14, 1.5f, 0.01),
+    bodySmall = ts(GroteskFont, 12, 1.4f, 0.02),
+    labelLarge = ts(MonoFont, 13, 1.25f, 0.06),
+    labelMedium = ts(MonoFont, 11, 1.25f, 0.08),
+    labelSmall = ts(MonoFont, 10, 1.2f, 0.06),
+)
+
 private fun colors() = darkColorScheme(
     primary = DF.Primary, onPrimary = DF.OnPrimary,
     primaryContainer = DF.SurfaceHigher, onPrimaryContainer = DF.Secondary,
@@ -141,4 +192,4 @@ private fun colors() = darkColorScheme(
 )
 
 @Composable
-fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = when (Ui.style) { UiStyle.MODERN -> dueffeType; UiStyle.SKEU -> skeuType; UiStyle.METRO -> metroType }, content = content)
+fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = when (Ui.style) { UiStyle.MODERN -> dueffeType; UiStyle.SKEU -> skeuType; UiStyle.METRO -> metroType; UiStyle.NOTHING -> ndType }, content = content)

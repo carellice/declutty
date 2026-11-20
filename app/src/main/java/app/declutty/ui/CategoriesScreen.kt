@@ -104,7 +104,8 @@ private fun CategoryCard(vm: MainViewModel, category: Category, apps: List<AppIt
     Column(
         modifier.pressScale(0.95f, onClick = onClick)
             .then(
-                if (tile) Modifier.background(color)
+                if (app.declutty.ui.theme.Nd.on) Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape)
+                else if (tile) Modifier.background(color)
                 else if (Skeu.on) Modifier.leatherPanel(shape, androidx.compose.ui.graphics.lerp(DF.Surface, color, 0.22f))
                 else Modifier.clip(shape)
                     .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(color.copy(alpha = 0.16f), DF.Surface)))
@@ -118,10 +119,10 @@ private fun CategoryCard(vm: MainViewModel, category: Category, apps: List<AppIt
                 Icon(category.icon(), null, tint = color, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.weight(1f))
-            AnimatedNumber("${apps.size}", if (tile) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, fg)
+            AnimatedNumber("${apps.size}", if (tile) MaterialTheme.typography.displaySmall else if (app.declutty.ui.theme.Nd.on) MaterialTheme.typography.headlineMedium.copy(fontFamily = app.declutty.ui.theme.MonoFont) else MaterialTheme.typography.headlineMedium, fg)
         }
         Spacer(Modifier.height(14.dp))
-        Text(if (tile) category.title.lowercase() else category.title, style = MaterialTheme.typography.titleMedium, color = if (tile) fg else DF.Text, maxLines = 1)
+        Text(if (tile) category.title.lowercase() else category.title.caps(), style = if (app.declutty.ui.theme.Nd.on) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium, color = if (tile) fg else DF.Text, maxLines = 1)
         Text(formatSize(apps.sumOf { it.size }), style = MaterialTheme.typography.bodySmall, color = if (tile) fg.copy(alpha = 0.8f) else DF.Muted)
         Spacer(Modifier.height(12.dp))
         // Le prime icone sovrapposte come un piccolo mazzo di carte.

@@ -43,6 +43,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
@@ -76,6 +81,11 @@ import app.declutty.data.Category
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Metro
+import app.declutty.ui.theme.Nd
+import app.declutty.ui.theme.NdColor
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -83,12 +93,13 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-enum class Tab(val label: String, val icon: ImageVector) {
-    HOME("Panoramica", Icons.Rounded.AutoAwesome),
-    APPS("App", Icons.Rounded.Apps),
-    CATEGORIES("Categorie", Icons.Rounded.Category),
-    PHOTOS("Foto", Icons.Rounded.PhotoLibrary),
-    CONTACTS("Contatti", Icons.Rounded.Contacts),
+/** [line]: icona a filo per lo stile Nothing, che non usa icone piene. */
+enum class Tab(val label: String, val icon: ImageVector, val line: ImageVector) {
+    HOME("Panoramica", Icons.Rounded.AutoAwesome, Icons.Outlined.AutoAwesome),
+    APPS("App", Icons.Rounded.Apps, Icons.Outlined.Apps),
+    CATEGORIES("Categorie", Icons.Rounded.Category, Icons.Outlined.Category),
+    PHOTOS("Foto", Icons.Rounded.PhotoLibrary, Icons.Outlined.PhotoLibrary),
+    CONTACTS("Contatti", Icons.Rounded.Contacts, Icons.Outlined.Contacts),
 }
 
 /** Schermate che si aprono sopra le schede. */
@@ -132,6 +143,8 @@ fun DeclutApp(vm: MainViewModel) {
                 val (fromPage, fromTab) = initialState
                 val (toPage, toTab) = targetState
                 when {
+                    // Nothing: le schermate si dissolvono, non scorrono.
+                    Nd.on -> fadeIn(tween(260, delayMillis = 60, easing = Motion.Nd)) togetherWith fadeOut(tween(120))
                     // Metro: la rotazione turnstile la fa il contenuto, qui resta solo la dissolvenza a tempo.
                     Metro.on && toPage.depth() != fromPage.depth() ->
                         fadeIn(tween(200, delayMillis = 160)) togetherWith fadeOut(tween(200))
@@ -200,6 +213,7 @@ fun DeclutApp(vm: MainViewModel) {
 @Composable
 private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
     if (Metro.on) return MetroAppBar(selected, onSelect)
+    if (Nd.on) return NdNavBar(selected, onSelect)
     val shape = rounded(30.dp)
     BoxWithConstraints(
         Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)
@@ -251,6 +265,29 @@ private fun MetroAppBar(selected: Tab, onSelect: (Tab) -> Unit) {
     }
 }
 
+/** Barra Nothing: nero, filo sottile in alto, etichette Space Mono e un punto rosso sotto la scheda attiva. */
+@Composable
+private fun NdNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(DF.Nav)
+            .drawBehind { drawRect(DF.Line, size = androidx.compose.ui.geometry.Size(size.width, 1.dp.toPx())) }
+            .navigationBarsPadding().padding(top = 12.dp, bottom = 10.dp),
+    ) {
+        Tab.entries.forEach { t ->
+            val active = t == selected
+            val fg by animateColorAsState(if (active) NdColor.Display else NdColor.Disabled, tween(200, easing = Motion.Nd), label = "ndTab")
+            val dot by androidx.compose.animation.core.animateFloatAsState(if (active) 1f else 0f, tween(200, easing = Motion.Nd), label = "ndDot")
+            Column(Modifier.weight(1f).height(52.dp).pressScale { onSelect(t) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(t.line, t.label, tint = fg, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.height(5.dp))
+                Text(t.label.uppercase(), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.04.em), color = fg, maxLines = 1, softWrap = false)
+                Spacer(Modifier.height(4.dp))
+                Box(Modifier.size(4.dp).graphicsLayer { alpha = dot }.clip(CircleShape).background(NdColor.Accent))
+            }
+        }
+    }
+}
+
 // ---------- Messaggi brevi ----------
 
 @Composable
@@ -258,6 +295,17 @@ private fun Toast(text: String?, modifier: Modifier, onDone: () -> Unit) {
     LaunchedEffect(text) { if (text != null) { delay(2400); onDone() } }
     var last by remember { mutableStateOf("") }
     if (text != null) last = text
+    if (Nd.on) {
+        // Nothing non usa toast: stato inline tra parentesi quadre, in alto, che si accende e si spegne.
+        AnimatedVisibility(text != null, modifier, enter = fadeIn(tween(150)), exit = fadeOut(tween(250))) {
+            Text(
+                "[ ${last.uppercase()} ]",
+                Modifier.fillMaxWidth().background(DF.Bg).statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.labelMedium, color = NdColor.Display,
+            )
+        }
+        return
+    }
     if (Metro.on) {
         // Toast di Windows Phone: fascia accento a tutta larghezza che scende dall'alto.
         AnimatedVisibility(
@@ -319,8 +367,17 @@ private fun UninstallProgress(vm: MainViewModel, run: app.declutty.UninstallRun)
     Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(168.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
-                drawArc(DF.SurfaceHigher, 0f, 360f, false, style = Stroke(10.dp.toPx()))
-                drawArc(
+                if (!Nd.on) drawArc(DF.SurfaceHigher, 0f, 360f, false, style = Stroke(10.dp.toPx()))
+                if (Nd.on) {
+                    // Strumento: 48 tacche intorno, accese in bianco man mano che procede.
+                    val n = 48
+                    for (i in 0 until n) {
+                        val a = (i * 360f / n - 90f) * (PI / 180).toFloat()
+                        val r1 = size.minDimension / 2 - 2.dp.toPx(); val r2 = r1 - 12.dp.toPx()
+                        val c = Offset(size.width / 2, size.height / 2)
+                        drawLine(if (i < (progress * n).toInt()) NdColor.Display else DF.LineStrong, c + Offset(cos(a) * r2, sin(a) * r2), c + Offset(cos(a) * r1, sin(a) * r1), 3.dp.toPx())
+                    }
+                } else drawArc(
                     Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.PrimaryStrong)), -90f, 360f * progress, false,
                     style = Stroke(10.dp.toPx(), cap = StrokeCap.Round),
                 )

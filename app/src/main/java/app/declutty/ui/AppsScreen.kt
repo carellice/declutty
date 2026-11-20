@@ -82,6 +82,7 @@ import app.declutty.data.sorted
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Metro
+import app.declutty.ui.theme.Nd
 import androidx.compose.ui.graphics.SolidColor
 
 private const val UNUSED_DAYS = 30
@@ -222,7 +223,7 @@ private fun AppRow(
     onLongClick: () -> Unit, onClick: () -> Unit,
 ) {
     val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.12f) else Color.Transparent, tween(240), label = "rowBg")
-    val border by animateColorAsState(if (selected) accent.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "rowBorder")
+    val border by animateColorAsState(if (selected && Nd.on) DF.LineStrong else if (selected) accent.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "rowBorder")
     val iconScale by animateFloatAsState(if (selected) 0.88f else 1f, spring(0.45f, 420f), label = "iconScale")
     val shape = rounded(22.dp)
     Row(
@@ -324,7 +325,7 @@ fun BarAction(icon: ImageVector, label: String, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, label, tint = DF.Text, modifier = Modifier.size(21.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = DF.Muted)
+        Text(label.caps(), style = MaterialTheme.typography.labelSmall, color = DF.Muted)
     }
 }
 
@@ -348,7 +349,8 @@ fun DfSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-fun SheetTitle(text: String) = if (Metro.on) Text(text.uppercase(), Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelLarge, color = DF.Text)
+fun SheetTitle(text: String) = if (Nd.on) Text(text.uppercase(), Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelMedium, color = DF.Muted)
+else if (Metro.on) Text(text.uppercase(), Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelLarge, color = DF.Text)
 else Text(text, Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.headlineSmall, color = DF.Text)
 
 @Composable
@@ -428,4 +430,4 @@ private fun MoveSheet(current: Category?, onDismiss: () -> Unit, onPick: (Catego
 }
 
 /** Gradiente dell'icona di categoria, usato in più schermate. */
-fun categoryBrush(c: Category): Brush = if (Metro.on) SolidColor(c.color()) else Brush.linearGradient(listOf(c.color().copy(alpha = 0.32f), c.color().copy(alpha = 0.1f)))
+fun categoryBrush(c: Category): Brush = if (Nd.on) SolidColor(DF.SurfaceHigh) else if (Metro.on) SolidColor(c.color()) else Brush.linearGradient(listOf(c.color().copy(alpha = 0.32f), c.color().copy(alpha = 0.1f)))
