@@ -27,6 +27,7 @@ enum class UiStyle(val label: String, val hint: String) {
     SKEU("Skeuomorfico", "Pelle, ottone e bottoni in gel"),
     METRO("Modern UI", "Piastrelle e tipografia, come Windows Phone"),
     NOTHING("Nothing", "Nero OLED, matrice a punti e un solo rosso"),
+    DUEFFE("Dueffe", "Avorio e oro su fondo quasi nero, aurora ambra"),
 }
 
 /** Stile in uso, letto all'avvio e cambiato dalle impostazioni. */
@@ -42,37 +43,43 @@ object Metro {
     val on get() = Ui.style == UiStyle.METRO
 }
 
+/** Stile Dueffe (design system DS.md di dueffe-home): stesse forme e movimenti di Moderno, palette oro. */
+object Dueffe {
+    val on get() = Ui.style == UiStyle.DUEFFE
+}
+
 /** Stile Nothing (design system di dominikmartn/nothing-design-skill). `Nothing` è un tipo Kotlin, da qui Nd. */
 object Nd {
     val on get() = Ui.style == UiStyle.NOTHING
 }
 
-private fun c(dueffe: Long, skeu: Long, metro: Long, nd: Long) = Color(
+private fun c(dueffe: Long, skeu: Long, metro: Long, nd: Long, gold: Long) = Color(
     when (Ui.style) {
         UiStyle.MODERN -> dueffe
+        UiStyle.DUEFFE -> gold
         UiStyle.SKEU -> skeu
         UiStyle.METRO -> metro
         UiStyle.NOTHING -> nd
     },
 )
 
-/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. Metro: nero puro e accento teal piatto. Nothing: monocromo OLED, rosso #D71921 solo per gli allarmi. */
+/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. Metro: nero puro e accento teal piatto. Dueffe: avorio e oro su quasi nero. Nothing: monocromo OLED, rosso #D71921 solo per gli allarmi. */
 object DF {
-    val Bg get() = c(0xFF050706, 0xFF24180F, 0xFF000000, 0xFF000000)
-    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B, 0xFF0A0A0A, 0xFF000000)
-    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C, 0xFF1F1F1F, 0xFF111111)
-    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34, 0xFF262626, 0xFF1A1A1A)
-    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13, 0xFF333333, 0xFF222222)
-    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6, 0xFFFFFFFF, 0xFFE8E8E8)
-    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E, 0xFF9A9A9A, 0xFF999999)
-    val Line get() = c(0x2980FFD0, 0x40E8D2B0, 0x33FFFFFF, 0xFF222222)
-    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0, 0xFFFFFFFF, 0xFF333333)
-    val Primary get() = c(0xFF5CF2B8, 0xFF62D394, 0xFF00ABA9, 0xFFFFFFFF)
-    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A, 0xFF00ABA9, 0xFFFFFFFF)
-    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579, 0xFF7FD5D4, 0xFF999999)
-    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF000000)
-    val Error get() = c(0xFFFF8F80, 0xFFF0806A, 0xFFE51400, 0xFFD71921)
-    val Nav get() = c(0xFF080B0A, 0xFF120C08, 0xFF1F1F1F, 0xFF000000)
+    val Bg get() = c(0xFF050706, 0xFF24180F, 0xFF000000, 0xFF000000, 0xFF050505)
+    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B, 0xFF0A0A0A, 0xFF000000, 0xFF0B0A08)
+    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C, 0xFF1F1F1F, 0xFF111111, 0xFF11100D)
+    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34, 0xFF262626, 0xFF1A1A1A, 0xFF1A1711)
+    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13, 0xFF333333, 0xFF222222, 0xFF242016)
+    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6, 0xFFFFFFFF, 0xFFE8E8E8, 0xFFFFFAF0)
+    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E, 0xFF9A9A9A, 0xFF999999, 0xFFB8AA8D)
+    val Line get() = c(0x2980FFD0, 0x40E8D2B0, 0x33FFFFFF, 0xFF222222, 0x29FFDC80)
+    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0, 0xFFFFFFFF, 0xFF333333, 0x57FFD84D)
+    val Primary get() = c(0xFF5CF2B8, 0xFF62D394, 0xFF00ABA9, 0xFFFFFFFF, 0xFFFFD84D)
+    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A, 0xFF00ABA9, 0xFFFFFFFF, 0xFFFFB800)
+    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579, 0xFF7FD5D4, 0xFF999999, 0xFFFFF0AD)
+    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF000000, 0xFF161006)
+    val Error get() = c(0xFFFF8F80, 0xFFF0806A, 0xFFE51400, 0xFFD71921, 0xFFFF9B85)
+    val Nav get() = c(0xFF080B0A, 0xFF120C08, 0xFF1F1F1F, 0xFF000000, 0xFF080705)
 }
 
 /** Nothing: bianco pieno per il dato principale, rosso segnale per ciò che è urgente. */
@@ -192,4 +199,4 @@ private fun colors() = darkColorScheme(
 )
 
 @Composable
-fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = when (Ui.style) { UiStyle.MODERN -> dueffeType; UiStyle.SKEU -> skeuType; UiStyle.METRO -> metroType; UiStyle.NOTHING -> ndType }, content = content)
+fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = when (Ui.style) { UiStyle.MODERN, UiStyle.DUEFFE -> dueffeType; UiStyle.SKEU -> skeuType; UiStyle.METRO -> metroType; UiStyle.NOTHING -> ndType }, content = content)

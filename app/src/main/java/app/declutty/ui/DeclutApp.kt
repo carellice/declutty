@@ -350,7 +350,7 @@ private fun UninstallOverlay(vm: MainViewModel) {
     AnimatedVisibility(run != null, enter = fadeIn(tween(250)), exit = fadeOut(tween(250))) {
         val r = run ?: return@AnimatedVisibility
         Box(
-            Modifier.fillMaxSize().background(Color(0xE6030504))
+            Modifier.fillMaxSize().background(DF.Bg.copy(alpha = 0.9f))
                 .clickable(remember { MutableInteractionSource() }, null) { },
             contentAlignment = Alignment.Center,
         ) {

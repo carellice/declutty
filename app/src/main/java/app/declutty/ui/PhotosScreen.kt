@@ -718,7 +718,7 @@ fun PhotoDoneOverlay(p: PhotoCleaner, onReview: () -> Unit) {
         val d = last ?: return@AnimatedVisibility
         val remaining = p.groups.orEmpty().size
         Box(
-            Modifier.fillMaxSize().background(Color(0xE6030504)).clickable(remember { MutableInteractionSource() }, null) { },
+            Modifier.fillMaxSize().background(DF.Bg.copy(alpha = 0.9f)).clickable(remember { MutableInteractionSource() }, null) { },
             contentAlignment = Alignment.Center,
         ) {
             Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {

@@ -101,6 +101,7 @@ import app.declutty.ui.theme.Motion
 import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Metro
 import app.declutty.ui.theme.Nd
+import app.declutty.ui.theme.Dueffe
 import app.declutty.ui.theme.NdColor
 import app.declutty.ui.theme.MonoFont
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -198,17 +199,20 @@ fun AuroraBackground(modifier: Modifier = Modifier) {
     if (Metro.on) return Box(modifier.fillMaxSize().background(DF.Bg))
     if (Nd.on) return DotGrid(modifier)
     val t = rememberInfiniteTransition(label = "aurora")
-    val a by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(36_000, easing = LinearEasing)), label = "a")
+    val gold = Dueffe.on
+    // Dueffe: nebulose oro e ambra (alfa 12–22%), deriva in 32s, 34 granelli di pulviscolo avorio.
+    val tints = if (gold) listOf(Color(0x38FFD84D), Color(0x2EFFB800), Color(0x1FFFF0AD)) else listOf(Color(0x305CF2B8), Color(0x1F3DD6F5), Color(0x1A1FD3A0))
+    val a by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(if (gold) 32_000 else 36_000, easing = LinearEasing)), label = "a")
     Canvas(modifier.fillMaxSize()) {
         drawRect(DF.Bg)
         val w = size.width
         val h = size.height
         fun blob(c: Offset, r: Float, color: Color) = drawCircle(Brush.radialGradient(listOf(color, Color.Transparent), c, r), r, c)
-        blob(Offset(w * (0.15f + 0.15f * cos(a)), h * 0.05f + 60f * sin(a * 2)), w * 0.95f, Color(0x305CF2B8))
-        blob(Offset(w * (0.95f + 0.08f * sin(a)), h * (0.42f + 0.05f * cos(a))), w * 0.7f, Color(0x1F3DD6F5))
-        blob(Offset(w * (0.3f + 0.2f * sin(a + 1.3f)), h * (0.95f + 0.03f * sin(a * 3))), w * 1.05f, Color(0x1A1FD3A0))
+        blob(Offset(w * (0.15f + 0.15f * cos(a)), h * 0.05f + 60f * sin(a * 2)), w * 0.95f, tints[0])
+        blob(Offset(w * (0.95f + 0.08f * sin(a)), h * (0.42f + 0.05f * cos(a))), w * 0.7f, tints[1])
+        blob(Offset(w * (0.3f + 0.2f * sin(a + 1.3f)), h * (0.95f + 0.03f * sin(a * 3))), w * 1.05f, tints[2])
         val phase = a / (2 * PI).toFloat()
-        for (i in 0 until 28) {
+        for (i in 0 until if (gold) 34 else 28) {
             val sx = seed(i * 3 + 1); val sy = seed(i * 7 + 2); val sp = 0.35f + seed(i * 11 + 3)
             val y = ((sy - phase * sp) % 1f + 1f) % 1f
             val tw = 0.5f + 0.5f * sin(a * 6 * sp + sx * 20)
@@ -462,7 +466,7 @@ fun Category.icon(): ImageVector = when (this) {
 
 /** Ogni categoria ha una tinta sua, sempre chiara e satura come l'accento. */
 // Nothing: monocromo, le categorie si distinguono per icona e posizione, non per colore.
-fun Category.color(): Color = if (Nd.on) DF.Text else if (Metro.on) MetroPalette[ordinal % MetroPalette.size] else Color.hsv((152f + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
+fun Category.color(): Color = if (Nd.on) DF.Text else if (Metro.on) MetroPalette[ordinal % MetroPalette.size] else Color.hsv(((if (Dueffe.on) 45f else 152f) + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
 
 // ---------- Formati ----------
 
