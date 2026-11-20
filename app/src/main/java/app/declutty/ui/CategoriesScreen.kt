@@ -40,6 +40,7 @@ import app.declutty.MainViewModel
 import app.declutty.data.AppItem
 import app.declutty.data.Category
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 
 @Composable
 fun CategoriesScreen(vm: MainViewModel, open: (Category) -> Unit) {
@@ -96,9 +97,13 @@ private fun CategoryCard(vm: MainViewModel, category: Category, apps: List<AppIt
     val color = category.color()
     val shape = RoundedCornerShape(26.dp)
     Column(
-        modifier.pressScale(0.95f, onClick = onClick).clip(shape)
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(color.copy(alpha = 0.16f), DF.Surface)))
-            .border(1.dp, color.copy(alpha = 0.26f), shape)
+        modifier.pressScale(0.95f, onClick = onClick)
+            .then(
+                if (Skeu.on) Modifier.leatherPanel(shape, androidx.compose.ui.graphics.lerp(DF.Surface, color, 0.22f))
+                else Modifier.clip(shape)
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(color.copy(alpha = 0.16f), DF.Surface)))
+                    .border(1.dp, color.copy(alpha = 0.26f), shape),
+            )
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

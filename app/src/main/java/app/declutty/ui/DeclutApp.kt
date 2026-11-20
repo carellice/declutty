@@ -72,6 +72,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.declutty.MainViewModel
 import app.declutty.data.Category
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -193,14 +194,17 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
     val shape = RoundedCornerShape(30.dp)
     BoxWithConstraints(
         Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)
-            .clip(shape).background(DF.Nav).border(1.dp, DF.Line, shape).padding(6.dp),
+            .panel(shape, DF.Nav, DF.Line).padding(6.dp),
     ) {
         val itemWidth = maxWidth / Tab.entries.size
         val x by animateDpAsState(itemWidth * selected.ordinal, spring(dampingRatio = 0.72f, stiffness = 420f), label = "navX")
+        val pill = RoundedCornerShape(24.dp)
         Box(
-            Modifier.offset(x = x).width(itemWidth).height(58.dp).clip(RoundedCornerShape(24.dp))
-                .background(Brush.verticalGradient(listOf(DF.Primary.copy(alpha = 0.2f), DF.Primary.copy(alpha = 0.08f))))
-                .border(1.dp, DF.Primary.copy(alpha = 0.35f), RoundedCornerShape(24.dp)),
+            Modifier.offset(x = x).width(itemWidth).height(58.dp).then(
+                if (Skeu.on) Modifier.inset(pill, Color.Black.copy(alpha = 0.45f))
+                else Modifier.clip(pill).background(Brush.verticalGradient(listOf(DF.Primary.copy(alpha = 0.2f), DF.Primary.copy(alpha = 0.08f))))
+                    .border(1.dp, DF.Primary.copy(alpha = 0.35f), pill),
+            ),
         )
         Row(Modifier.fillMaxWidth()) {
             Tab.entries.forEach { t ->
@@ -234,7 +238,7 @@ private fun Toast(text: String?, modifier: Modifier, onDone: () -> Unit) {
     ) {
         Text(
             last,
-            Modifier.clip(CircleShape).background(DF.SurfaceHigher).border(1.dp, DF.LineStrong, CircleShape).padding(horizontal = 18.dp, vertical = 11.dp),
+            Modifier.panel(CircleShape, DF.SurfaceHigher, DF.LineStrong, stitched = false).padding(horizontal = 18.dp, vertical = 11.dp),
             style = MaterialTheme.typography.labelLarge, color = DF.Text,
         )
     }

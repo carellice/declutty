@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Visibility
@@ -55,6 +56,7 @@ import app.declutty.MainViewModel
 import app.declutty.R
 import app.declutty.UpdateState
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 
 @Composable
 fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onPhotos: () -> Unit, onBack: () -> Unit) {
@@ -81,6 +83,7 @@ fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onPhotos: () -> Unit
             Spacer(Modifier.height(18.dp))
         }
         item { UpdateCard(vm, Modifier.reveal(1)) }
+        item { StyleCard(Modifier.reveal(2)) }
         item {
             SettingRow(
                 Icons.Rounded.Insights, "Accesso ai dati di utilizzo",
@@ -140,6 +143,33 @@ private fun UpdateCard(vm: MainViewModel, modifier: Modifier) {
                 is UpdateState.Ready -> MintButton("Installa", Icons.Rounded.SystemUpdate, Modifier.fillMaxWidth()) { vm.installUpdate() }
                 is UpdateState.Downloading, UpdateState.Checking -> Unit
                 else -> MintButton("Controlla aggiornamenti", null, Modifier.fillMaxWidth(), filled = false) { vm.checkUpdate(manual = true) }
+            }
+        }
+    }
+}
+
+/** Scelta dello stile grafico, salvata e applicata subito a tutta l'app. */
+@Composable
+private fun StyleCard(modifier: Modifier) {
+    val context = LocalContext.current
+    fun pick(skeu: Boolean) {
+        Skeu.on = skeu
+        context.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putBoolean("skeu", skeu).apply()
+    }
+    CardSurface(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Palette, null, tint = DF.Primary, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text("Stile grafico", style = MaterialTheme.typography.titleMedium, color = DF.Text)
+                    Text(if (Skeu.on) "Pelle, ottone e bottoni in gel" else "Menta su fondo scuro", style = MaterialTheme.typography.bodySmall, color = DF.Muted)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                DfChip("Moderno", !Skeu.on, Modifier.weight(1f)) { pick(false) }
+                DfChip("Skeuomorfico", Skeu.on, Modifier.weight(1f)) { pick(true) }
             }
         }
     }

@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import app.declutty.MainViewModel
 import app.declutty.data.ContactItem
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 
 private enum class ContactFilter(val label: String) { ALL("Tutti"), DUPLICATES("Duplicati"), NO_NUMBER("Senza numero"), NO_NAME("Senza nome") }
 
@@ -221,7 +222,8 @@ private fun ContactRow(vm: MainViewModel, c: ContactItem, selected: Boolean, ind
     val shape = RoundedCornerShape(22.dp)
     Row(
         modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-            .pressScale(0.97f, onLongClick, onClick).clip(shape).background(bg).border(1.dp, border, shape)
+            .pressScale(0.97f, onLongClick, onClick)
+            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, DF.Primary.copy(alpha = 0.5f)) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

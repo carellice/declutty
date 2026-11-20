@@ -80,6 +80,7 @@ import app.declutty.data.AppSort
 import app.declutty.data.Category
 import app.declutty.data.sorted
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 
 private const val UNUSED_DAYS = 30
 private const val DAY = 24L * 60 * 60 * 1000
@@ -224,7 +225,8 @@ private fun AppRow(
     val shape = RoundedCornerShape(22.dp)
     Row(
         modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-            .pressScale(0.97f, onLongClick, onClick).clip(shape).background(bg).border(1.dp, border, shape)
+            .pressScale(0.97f, onLongClick, onClick)
+            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, accent.copy(alpha = 0.5f)) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -299,7 +301,7 @@ fun SelectionBar(visible: Boolean, modifier: Modifier, label: String, onClear: (
         val shape = RoundedCornerShape(28.dp)
         Row(
             Modifier.navigationBarsPadding().fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)
-                .clip(shape).background(DF.SurfaceHigher).border(1.dp, DF.LineStrong, shape).padding(8.dp),
+                .panel(shape, DF.SurfaceHigher, DF.LineStrong).padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -336,7 +338,10 @@ fun DfSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) 
         scrimColor = Color(0xB3000000),
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
     ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp), content = content)
+        Column(
+            Modifier.fillMaxWidth().then(if (Skeu.on) Modifier.leatherTexture(DF.SurfaceHigh, 0.55f) else Modifier).navigationBarsPadding().padding(bottom = 16.dp),
+            content = content,
+        )
     }
 }
 

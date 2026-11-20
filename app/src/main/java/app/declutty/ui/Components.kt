@@ -91,6 +91,7 @@ import app.declutty.data.Category
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.DisplayFont
 import app.declutty.ui.theme.Motion
+import app.declutty.ui.theme.Skeu
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -143,6 +144,7 @@ fun Modifier.shimmer(): Modifier = composed {
 /** Fondale vivo: nebulose menta che derivano lentamente e pulviscolo che sale. */
 @Composable
 fun AuroraBackground(modifier: Modifier = Modifier) {
+    if (Skeu.on) return LeatherDesk(modifier)
     val t = rememberInfiniteTransition(label = "aurora")
     val a by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(36_000, easing = LinearEasing)), label = "a")
     Canvas(modifier.fillMaxSize()) {
@@ -163,6 +165,16 @@ fun AuroraBackground(modifier: Modifier = Modifier) {
     }
 }
 
+/** Scrivania in pelle: texture vera, luce calda dall'alto e vignettatura ai bordi. */
+@Composable
+private fun LeatherDesk(modifier: Modifier) {
+    Box(modifier.fillMaxSize().leatherTexture(DF.Bg, 0.2f).drawBehind {
+        val w = size.width; val h = size.height
+        drawRect(Brush.radialGradient(listOf(Color(0x33FFD9A0), Color.Transparent), Offset(w * 0.5f, h * 0.08f), w * 0.9f))
+        drawRect(Brush.radialGradient(0.55f to Color.Transparent, 1f to Color(0xAA000000), center = Offset(w / 2, h / 2), radius = maxOf(w, h) * 0.75f))
+    })
+}
+
 private fun seed(i: Int): Float = ((sin(i * 12.9898) * 43758.5453) % 1.0).let { abs(it) }.toFloat()
 
 // ---------- Elementi di base ----------
@@ -173,10 +185,11 @@ fun DfChip(text: String, selected: Boolean, modifier: Modifier = Modifier, icon:
     val fg by animateColorAsState(if (selected) DF.OnPrimary else DF.Text, tween(260), label = "chipFg")
     val border by animateColorAsState(if (selected) DF.Primary else DF.Line, tween(260), label = "chipBorder")
     Row(
-        modifier.pressScale(0.92f, onClick = onClick).clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+        modifier.pressScale(0.92f, onClick = onClick)
+            .then(if (!Skeu.on) Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape) else if (selected) Modifier.gel(CircleShape, DF.PrimaryStrong) else Modifier.leatherPanel(CircleShape, DF.SurfaceHigh, stitched = false, depth = 2.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
         Text(text, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
@@ -197,14 +210,15 @@ fun MintButton(
     Row(
         modifier.pressScale(0.95f, onClick = onClick).clip(shape)
             .then(
-                if (filled) Modifier.background(Brush.linearGradient(listOf(accent, if (danger) Color(0xFFFF6B5B) else DF.PrimaryStrong)))
+                if (Skeu.on) { if (filled) Modifier.gel(shape, if (danger) Color(0xFFB8402E) else DF.PrimaryStrong) else Modifier.leatherPanel(shape, DF.SurfaceHigh, stitched = false, depth = 2.5.dp) }
+                else if (filled) Modifier.background(Brush.linearGradient(listOf(accent, if (danger) Color(0xFFFF6B5B) else DF.PrimaryStrong)))
                 else Modifier.background(DF.Surface).border(1.dp, DF.LineStrong, shape),
             )
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        val fg = if (filled) DF.OnPrimary else DF.Text
+        val fg = if (filled) DF.OnPrimary else DF.Text // skeu: OnPrimary è bianco, leggibile sul gel scuro
         if (icon != null) {
             Icon(icon, null, tint = fg, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
@@ -221,7 +235,8 @@ fun CardSurface(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape).padding(padding),
+        (if (Skeu.on) modifier.leatherPanel(shape) else modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape))
+            .padding(padding),
     ) { content() }
 }
 
@@ -229,7 +244,7 @@ fun CardSurface(
 fun Pill(text: String, modifier: Modifier = Modifier, color: Color = DF.Primary) {
     Text(
         text,
-        modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape)
+        (if (Skeu.on) modifier.inset(CircleShape, Color.Black.copy(alpha = 0.35f)) else modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape))
             .padding(horizontal = 9.dp, vertical = 3.dp),
         style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
@@ -252,16 +267,18 @@ fun ScreenHeader(title: String, subtitle: String, modifier: Modifier = Modifier,
 @Composable
 fun RoundIconButton(icon: ImageVector, description: String, modifier: Modifier = Modifier, tint: Color = DF.Text, onClick: () -> Unit) {
     Box(
-        modifier.pressScale(0.88f, onClick = onClick).size(44.dp).clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape),
+        modifier.pressScale(0.88f, onClick = onClick).size(44.dp)
+            .then(if (Skeu.on) Modifier.brass(CircleShape) else Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape)),
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, description, tint = tint, modifier = Modifier.size(21.dp)) }
+    ) { Icon(icon, description, tint = if (Skeu.on) Color(0xFF3A2610) else tint, modifier = Modifier.size(21.dp)) }
 }
 
 @Composable
 fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(18.dp)
     Row(
-        modifier.fillMaxWidth().padding(horizontal = 20.dp).clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape)
+        modifier.fillMaxWidth().padding(horizontal = 20.dp)
+            .then(if (Skeu.on) Modifier.inset(shape) else Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -283,10 +300,11 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, 
 fun SelectCheck(selected: Boolean, modifier: Modifier = Modifier) {
     val p by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "check")
     Box(modifier.size(26.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize().clip(CircleShape).border(1.6.dp, if (selected) DF.Primary else DF.LineStrong, CircleShape))
+        if (Skeu.on) Box(Modifier.fillMaxSize().inset(CircleShape, Color.Black.copy(alpha = 0.4f)))
+        else Box(Modifier.fillMaxSize().clip(CircleShape).border(1.6.dp, if (selected) DF.Primary else DF.LineStrong, CircleShape))
         Box(
-            Modifier.fillMaxSize().graphicsLayer { scaleX = p; scaleY = p; alpha = p.coerceIn(0f, 1f) }.clip(CircleShape)
-                .background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong))),
+            Modifier.fillMaxSize().graphicsLayer { scaleX = p; scaleY = p; alpha = p.coerceIn(0f, 1f) }
+                .then(if (Skeu.on) Modifier.gel(CircleShape, DF.PrimaryStrong, 1.5.dp) else Modifier.clip(CircleShape).background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong)))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Rounded.Check, null, tint = DF.OnPrimary, modifier = Modifier.size(17.dp).graphicsLayer { rotationZ = (1f - p) * -40f }) }
     }

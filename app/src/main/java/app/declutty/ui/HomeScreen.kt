@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -61,6 +62,7 @@ import app.declutty.data.AppSort
 import app.declutty.data.Category
 import app.declutty.data.sorted
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Skeu
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.delay
 
@@ -190,6 +192,10 @@ private fun Hero(total: Int, unused: Int, usageAccess: Boolean) {
         Spacer(Modifier.width(12.dp))
         Box(Modifier.size(104.dp).reveal(2), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
+                if (Skeu.on) { // quadrante in ottone intorno all'anello
+                    drawCircle(Brush.sweepGradient(listOf(Color(0xFFF6DFA2), Color(0xFF8A6427), Color(0xFFE8C579), Color(0xFF6E4E1E), Color(0xFFF6DFA2))), size.minDimension / 2 + 8.dp.toPx(), style = Stroke(5.dp.toPx()))
+                    drawCircle(Color.Black.copy(alpha = 0.45f), size.minDimension / 2 + 5.5.dp.toPx())
+                }
                 drawArc(DF.SurfaceHigher, 0f, 360f, false, style = Stroke(9.dp.toPx()))
                 drawArc(
                     Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.Secondary, DF.PrimaryStrong)), -90f, 360f * ring.value, false,
