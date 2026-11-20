@@ -56,7 +56,9 @@ import app.declutty.MainViewModel
 import app.declutty.R
 import app.declutty.UpdateState
 import app.declutty.ui.theme.DF
-import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
+import app.declutty.ui.theme.Ui
+import app.declutty.ui.theme.UiStyle
 
 @Composable
 fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onPhotos: () -> Unit, onBack: () -> Unit) {
@@ -73,7 +75,7 @@ fun SettingsScreen(vm: MainViewModel, onHidden: () -> Unit, onPhotos: () -> Unit
         }
         item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).reveal(0), verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(R.mipmap.ic_launcher_foreground), null, Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)).background(DF.SurfaceHigh))
+                Image(painterResource(R.mipmap.ic_launcher_foreground), null, Modifier.size(72.dp).clip(rounded(20.dp)).background(if (Metro.on) DF.Primary else DF.SurfaceHigh))
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text("Declutty", style = MaterialTheme.typography.headlineMedium, color = DF.Text)
@@ -133,8 +135,8 @@ private fun UpdateCard(vm: MainViewModel, modifier: Modifier) {
             if (state is UpdateState.Downloading) {
                 val p by animateFloatAsState(state.progress, label = "dl")
                 Spacer(Modifier.height(14.dp))
-                Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(DF.SurfaceHigher)) {
-                    Box(Modifier.fillMaxWidth(p).height(8.dp).clip(RoundedCornerShape(4.dp)).background(DF.Primary))
+                Box(Modifier.fillMaxWidth().height(8.dp).clip(rounded(4.dp)).background(DF.SurfaceHigher)) {
+                    Box(Modifier.fillMaxWidth(p).height(8.dp).clip(rounded(4.dp)).background(DF.Primary))
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -152,9 +154,9 @@ private fun UpdateCard(vm: MainViewModel, modifier: Modifier) {
 @Composable
 private fun StyleCard(modifier: Modifier) {
     val context = LocalContext.current
-    fun pick(skeu: Boolean) {
-        Skeu.on = skeu
-        context.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putBoolean("skeu", skeu).apply()
+    fun pick(style: UiStyle) {
+        Ui.style = style
+        context.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE).edit().putString("style", style.name).apply()
     }
     CardSurface(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
         Column {
@@ -163,13 +165,12 @@ private fun StyleCard(modifier: Modifier) {
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Text("Stile grafico", style = MaterialTheme.typography.titleMedium, color = DF.Text)
-                    Text(if (Skeu.on) "Pelle, ottone e bottoni in gel" else "Menta su fondo scuro", style = MaterialTheme.typography.bodySmall, color = DF.Muted)
+                    Text(Ui.style.hint, style = MaterialTheme.typography.bodySmall, color = DF.Muted)
                 }
             }
             Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-                DfChip("Moderno", !Skeu.on, Modifier.weight(1f)) { pick(false) }
-                DfChip("Skeuomorfico", Skeu.on, Modifier.weight(1f)) { pick(true) }
+            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                UiStyle.entries.forEach { st -> DfChip(st.label, Ui.style == st, Modifier.fillMaxWidth()) { pick(st) } }
             }
         }
     }
@@ -179,11 +180,11 @@ private fun StyleCard(modifier: Modifier) {
 private fun SettingRow(icon: ImageVector, title: String, subtitle: String, index: Int, onClick: () -> Unit) {
     Row(
         Modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).pressScale(0.97f, onClick = onClick)
-            .clip(RoundedCornerShape(22.dp)).padding(horizontal = 12.dp, vertical = 14.dp),
+            .clip(rounded(22.dp)).padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(DF.Surface), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = DF.Primary, modifier = Modifier.size(21.dp))
+        Box(Modifier.size(42.dp).clip(rounded(14.dp)).background(if (Metro.on) DF.Primary else DF.Surface), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = if (Metro.on) DF.OnPrimary else DF.Primary, modifier = Modifier.size(21.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {

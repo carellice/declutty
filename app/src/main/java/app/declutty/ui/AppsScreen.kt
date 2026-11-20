@@ -81,6 +81,8 @@ import app.declutty.data.Category
 import app.declutty.data.sorted
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
+import androidx.compose.ui.graphics.SolidColor
 
 private const val UNUSED_DAYS = 30
 private const val DAY = 24L * 60 * 60 * 1000
@@ -222,11 +224,11 @@ private fun AppRow(
     val bg by animateColorAsState(if (selected) accent.copy(alpha = 0.12f) else Color.Transparent, tween(240), label = "rowBg")
     val border by animateColorAsState(if (selected) accent.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "rowBorder")
     val iconScale by animateFloatAsState(if (selected) 0.88f else 1f, spring(0.45f, 420f), label = "iconScale")
-    val shape = RoundedCornerShape(22.dp)
+    val shape = rounded(22.dp)
     Row(
         modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
             .pressScale(0.97f, onLongClick, onClick)
-            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, accent.copy(alpha = 0.5f)) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
+            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, accent.copy(alpha = 0.5f)) else if (Metro.on) Modifier.background(bg) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -253,7 +255,7 @@ private fun detail(sort: AppSort, app: AppItem): String = when (sort) {
 @Composable
 fun LoadingRow() {
     Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).shimmer())
+        Box(Modifier.size(48.dp).clip(rounded(14.dp)).shimmer())
         Spacer(Modifier.width(14.dp))
         Column {
             Box(Modifier.width(150.dp).height(14.dp).clip(CircleShape).shimmer())
@@ -298,9 +300,9 @@ fun SelectionBar(visible: Boolean, modifier: Modifier, label: String, onClear: (
         enter = slideInVertically(spring(0.75f, 380f)) { it } + fadeIn(),
         exit = slideOutVertically(tween(220)) { it } + fadeOut(),
     ) {
-        val shape = RoundedCornerShape(28.dp)
+        val shape = rounded(28.dp)
         Row(
-            Modifier.navigationBarsPadding().fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)
+            Modifier.navigationBarsPadding().fillMaxWidth().padding(horizontal = if (Metro.on) 0.dp else 14.dp, vertical = if (Metro.on) 0.dp else 10.dp)
                 .panel(shape, DF.SurfaceHigher, DF.LineStrong).padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -318,7 +320,7 @@ fun SelectionBar(visible: Boolean, modifier: Modifier, label: String, onClear: (
 @Composable
 fun BarAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     Column(
-        Modifier.pressScale(0.88f, onClick = onClick).clip(RoundedCornerShape(16.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
+        Modifier.pressScale(0.88f, onClick = onClick).clip(rounded(16.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, label, tint = DF.Text, modifier = Modifier.size(21.dp))
@@ -336,7 +338,7 @@ fun DfSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) 
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = DF.SurfaceHigh,
         scrimColor = Color(0xB3000000),
-        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+        shape = rounded(topStart = 30.dp, topEnd = 30.dp),
     ) {
         Column(
             Modifier.fillMaxWidth().then(if (Skeu.on) Modifier.leatherTexture(DF.SurfaceHigh, 0.55f) else Modifier).navigationBarsPadding().padding(bottom = 16.dp),
@@ -346,14 +348,15 @@ fun DfSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-fun SheetTitle(text: String) = Text(text, Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.headlineSmall, color = DF.Text)
+fun SheetTitle(text: String) = if (Metro.on) Text(text.uppercase(), Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelLarge, color = DF.Text)
+else Text(text, Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.headlineSmall, color = DF.Text)
 
 @Composable
 fun SheetOption(icon: ImageVector, text: String, selected: Boolean = false, tint: Color = DF.Text, index: Int = 0, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) DF.Primary.copy(alpha = 0.14f) else Color.Transparent, label = "opt")
     Row(
         Modifier.reveal(index, 30).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).pressScale(0.97f, onClick = onClick)
-            .clip(RoundedCornerShape(18.dp)).background(bg).padding(horizontal = 14.dp, vertical = 14.dp),
+            .clip(rounded(18.dp)).background(bg).padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = if (selected) DF.Primary else tint, modifier = Modifier.size(22.dp))
@@ -425,4 +428,4 @@ private fun MoveSheet(current: Category?, onDismiss: () -> Unit, onPick: (Catego
 }
 
 /** Gradiente dell'icona di categoria, usato in più schermate. */
-fun categoryBrush(c: Category) = Brush.linearGradient(listOf(c.color().copy(alpha = 0.32f), c.color().copy(alpha = 0.1f)))
+fun categoryBrush(c: Category): Brush = if (Metro.on) SolidColor(c.color()) else Brush.linearGradient(listOf(c.color().copy(alpha = 0.32f), c.color().copy(alpha = 0.1f)))

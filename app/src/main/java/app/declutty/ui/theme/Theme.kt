@@ -21,30 +21,51 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.declutty.R
 
-/** Stile grafico scelto dall'utente: false = Dueffe (menta su nero), true = skeuomorfismo (pelle, ottone, gel). */
-object Skeu {
-    var on by mutableStateOf(false)
+/** Stili grafici selezionabili dalle impostazioni. */
+enum class UiStyle(val label: String, val hint: String) {
+    MODERN("Moderno", "Menta su fondo scuro"),
+    SKEU("Skeuomorfico", "Pelle, ottone e bottoni in gel"),
+    METRO("Modern UI", "Piastrelle e tipografia, come Windows Phone"),
 }
 
-private fun c(dueffe: Long, skeu: Long) = if (Skeu.on) Color(skeu) else Color(dueffe)
+/** Stile in uso, letto all'avvio e cambiato dalle impostazioni. */
+object Ui {
+    var style by mutableStateOf(UiStyle.MODERN)
+}
 
-/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. */
+object Skeu {
+    val on get() = Ui.style == UiStyle.SKEU
+}
+
+object Metro {
+    val on get() = Ui.style == UiStyle.METRO
+}
+
+private fun c(dueffe: Long, skeu: Long, metro: Long) = Color(
+    when (Ui.style) {
+        UiStyle.MODERN -> dueffe
+        UiStyle.SKEU -> skeu
+        UiStyle.METRO -> metro
+    },
+)
+
+/** Token colore. Dueffe: menta su fondo quasi nero. Skeu: pelle scura, crema e smeraldo lucido. Metro: nero puro e accento teal piatto. */
 object DF {
-    val Bg get() = c(0xFF050706, 0xFF24180F)
-    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B)
-    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C)
-    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34)
-    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13)
-    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6)
-    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E)
-    val Line get() = c(0x2980FFD0, 0x40E8D2B0)
-    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0)
-    val Primary get() = c(0xFF5CF2B8, 0xFF62D394)
-    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A)
-    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579)
-    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF)
-    val Error get() = c(0xFFFF8F80, 0xFFF0806A)
-    val Nav get() = c(0xFF080B0A, 0xFF120C08)
+    val Bg get() = c(0xFF050706, 0xFF24180F, 0xFF000000)
+    val BgElevated get() = c(0xFF0A0D0C, 0xFF1A110B, 0xFF0A0A0A)
+    val Surface get() = c(0xFF0F1311, 0xFF5A3F2C, 0xFF1F1F1F)
+    val SurfaceHigh get() = c(0xFF161C19, 0xFF684A34, 0xFF262626)
+    val SurfaceHigher get() = c(0xFF1F2723, 0xFF2A1C13, 0xFF333333)
+    val Text get() = c(0xFFF2FFF8, 0xFFF7EBD6, 0xFFFFFFFF)
+    val Muted get() = c(0xFF9DB3A8, 0xFFC9B08E, 0xFF9A9A9A)
+    val Line get() = c(0x2980FFD0, 0x40E8D2B0, 0x33FFFFFF)
+    val LineStrong get() = c(0x575CF2B8, 0x8CE8D2B0, 0xFFFFFFFF)
+    val Primary get() = c(0xFF5CF2B8, 0xFF62D394, 0xFF00ABA9)
+    val PrimaryStrong get() = c(0xFF1FD3A0, 0xFF1F7D4A, 0xFF00ABA9)
+    val Secondary get() = c(0xFFC8FFE9, 0xFFE8C579, 0xFF7FD5D4)
+    val OnPrimary get() = c(0xFF03140D, 0xFFFFFFFF, 0xFFFFFFFF)
+    val Error get() = c(0xFFFF8F80, 0xFFF0806A, 0xFFE51400)
+    val Nav get() = c(0xFF080B0A, 0xFF120C08, 0xFF1F1F1F)
 }
 
 object Motion {
@@ -93,6 +114,20 @@ private fun Typography.pressed() = Typography(
 private val dueffeType = typography(DisplayFont, BodyFont)
 private val skeuType = typography(FontFamily.Serif, BodyFont).pressed()
 
+/** Metro: sans-serif di sistema, titoli sottili e grandi come Segoe WP Light. */
+private fun TextStyle.m(weight: FontWeight) = copy(fontFamily = FontFamily.SansSerif, fontWeight = weight, letterSpacing = if (letterSpacing.value < 0f) (-0.01).em else letterSpacing)
+
+private val metroType = dueffeType.run {
+    Typography(
+        displayLarge.m(FontWeight.Light).copy(fontSize = 56.sp, lineHeight = 58.sp),
+        displayMedium.m(FontWeight.Light).copy(fontSize = 48.sp, lineHeight = 52.sp),
+        displaySmall.m(FontWeight.Light), headlineLarge.m(FontWeight.Light), headlineMedium.m(FontWeight.Light), headlineSmall.m(FontWeight.Light),
+        titleLarge.m(FontWeight.Normal), titleMedium.m(FontWeight.Normal), titleSmall.m(FontWeight.Normal),
+        bodyLarge.m(FontWeight.Normal), bodyMedium.m(FontWeight.Normal), bodySmall.m(FontWeight.Normal),
+        labelLarge.m(FontWeight.Medium), labelMedium.m(FontWeight.Medium), labelSmall.m(FontWeight.Normal),
+    )
+}
+
 private fun colors() = darkColorScheme(
     primary = DF.Primary, onPrimary = DF.OnPrimary,
     primaryContainer = DF.SurfaceHigher, onPrimaryContainer = DF.Secondary,
@@ -106,4 +141,4 @@ private fun colors() = darkColorScheme(
 )
 
 @Composable
-fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = if (Skeu.on) skeuType else dueffeType, content = content)
+fun DeclutTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = colors(), typography = when (Ui.style) { UiStyle.MODERN -> dueffeType; UiStyle.SKEU -> skeuType; UiStyle.METRO -> metroType }, content = content)

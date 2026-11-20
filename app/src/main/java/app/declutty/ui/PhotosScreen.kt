@@ -133,6 +133,8 @@ import app.declutty.data.Photo
 import app.declutty.data.SimilarGroup
 import app.declutty.data.TimeWindow
 import app.declutty.ui.theme.DF
+import app.declutty.ui.theme.Metro
+import androidx.compose.ui.graphics.SolidColor
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -309,7 +311,7 @@ private fun PhotosIntro(p: PhotoCleaner, openSettings: () -> Unit) {
 private fun PhotoStat(icon: ImageVector, value: String, label: String, index: Int, modifier: Modifier) {
     CardSurface(modifier.reveal(index), padding = PaddingValues(16.dp)) {
         Column {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(DF.Primary.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp).clip(rounded(12.dp)).background(DF.Primary.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = DF.Primary, modifier = Modifier.size(19.dp))
             }
             Spacer(Modifier.height(14.dp))
@@ -336,7 +338,7 @@ private fun ScanView(p: PhotoCleaner) {
             Canvas(Modifier.fillMaxSize()) {
                 drawArc(DF.SurfaceHigher, 0f, 360f, false, style = Stroke(10.dp.toPx()))
                 drawArc(
-                    Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.Secondary, DF.PrimaryStrong)), -90f, 360f * animated, false,
+                    if (Metro.on) SolidColor(DF.Primary) else Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.Secondary, DF.PrimaryStrong)), -90f, 360f * animated, false,
                     style = Stroke(10.dp.toPx(), cap = StrokeCap.Round),
                 )
             }
@@ -494,7 +496,7 @@ private fun GroupCard(
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 private fun SelectableThumb(photo: Photo, isBest: Boolean, marked: Boolean, size: Dp, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = rounded(18.dp)
     val border by animateColorAsState(if (isBest) DF.Primary else if (marked) DF.Error else DF.Line, tween(240), label = "border")
     val scale by animateFloatAsState(if (marked) 0.92f else 1f, spring(0.5f, 400f), label = "scale")
     Box(Modifier.size(size).graphicsLayer { scaleX = scale; scaleY = scale }.pressScale(0.92f, onLongClick, onClick).clip(shape).border(2.dp, border, shape)) {
@@ -522,7 +524,7 @@ private fun DeleteCheck(checked: Boolean, modifier: Modifier) {
 
 @Composable
 private fun PhotoBadge(icon: ImageVector?, text: String, color: Color, modifier: Modifier = Modifier) {
-    Row(modifier.clip(CircleShape).background(color).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.clip(if (Metro.on) androidx.compose.ui.graphics.RectangleShape else CircleShape).background(color).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
             Icon(icon, null, tint = DF.OnPrimary, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(3.dp))
@@ -560,7 +562,7 @@ fun PhotoGroupScreen(p: PhotoCleaner, groupId: Long, onBack: () -> Unit) {
         }
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 20.dp), pageSpacing = 12.dp) { page ->
             val m = group.members[page]
-            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp)).background(DF.Surface).border(1.dp, DF.Line, RoundedCornerShape(28.dp)).clickable { viewer = true }) {
+            Box(Modifier.fillMaxSize().clip(rounded(28.dp)).background(DF.Surface).border(1.dp, DF.Line, rounded(28.dp)).clickable { viewer = true }) {
                 PhotoImage(m.photo, 1600, Modifier.fillMaxSize(), ContentScale.Fit)
                 Row(Modifier.align(Alignment.TopStart).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (m.photo.id == group.bestId) PhotoBadge(Icons.Rounded.WorkspacePremium, "Da tenere", DF.Primary)

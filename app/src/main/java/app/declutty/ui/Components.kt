@@ -23,6 +23,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +68,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -79,6 +82,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,6 +99,7 @@ import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.DisplayFont
 import app.declutty.ui.theme.Motion
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -107,6 +115,7 @@ import kotlin.math.sin
 fun Modifier.pressScale(pressedScale: Float = 0.95f, onLongClick: (() -> Unit)? = null, onClick: () -> Unit): Modifier = composed {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
+    if (Metro.on) return@composed tilt(source, pressed).combinedClickable(interactionSource = source, indication = null, onLongClick = onLongClick, onClick = onClick)
     val scale by animateFloatAsState(
         if (pressed) pressedScale else 1f,
         spring(dampingRatio = if (pressed) 1f else 0.42f, stiffness = if (pressed) 900f else 380f),
@@ -116,12 +125,36 @@ fun Modifier.pressScale(pressedScale: Float = 0.95f, onLongClick: (() -> Unit)? 
         .combinedClickable(interactionSource = source, indication = null, onLongClick = onLongClick, onClick = onClick)
 }
 
-/** Entrata a cascata: dissolvenza, salita e leggero zoom con ritardo per indice. */
+/** Tilt di Windows Phone: l'elemento si inclina verso il punto toccato, come se affondasse sotto il dito. */
+private fun Modifier.tilt(source: MutableInteractionSource, pressed: Boolean): Modifier = composed {
+    var at by remember { mutableStateOf(Offset.Unspecified) }
+    LaunchedEffect(source) { source.interactions.collect { if (it is PressInteraction.Press) at = it.pressPosition } }
+    val k by animateFloatAsState(if (pressed) 1f else 0f, tween(if (pressed) 90 else 180), label = "tilt")
+    graphicsLayer {
+        val dx = if (at.isSpecified && size.width > 0f) (at.x / size.width - 0.5f) * 2f else 0f
+        val dy = if (at.isSpecified && size.height > 0f) (at.y / size.height - 0.5f) * 2f else 0f
+        // Più il tocco è lontano dal centro, più si inclina; al centro affonda e basta. Le righe larghe si inclinano meno.
+        val deg = 10f * 160f / maxOf(160f, size.width / density)
+        rotationY = -dx * deg * k
+        rotationX = dy * deg * k
+        val s = 1f - 0.035f * k * (1f - 0.5f * maxOf(abs(dx), abs(dy)))
+        scaleX = s; scaleY = s
+        cameraDistance = 10f * density
+    }
+}
+
+/** Entrata a cascata: dissolvenza, salita e leggero zoom con ritardo per indice. In Metro: turnstile feather. */
 fun Modifier.reveal(index: Int, step: Long = 45): Modifier = composed {
     val p = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay(index.coerceAtMost(12) * step)
-        p.animateTo(1f, tween(560, easing = Motion.Letter))
+        p.animateTo(1f, tween(if (Metro.on) 420 else 560, easing = Motion.Letter))
+    }
+    if (Metro.on) return@composed graphicsLayer {
+        alpha = p.value
+        rotationY = (1f - p.value) * -70f
+        transformOrigin = TransformOrigin(0f, 0.5f)
+        cameraDistance = 12f * density
     }
     graphicsLayer {
         alpha = p.value
@@ -145,6 +178,7 @@ fun Modifier.shimmer(): Modifier = composed {
 @Composable
 fun AuroraBackground(modifier: Modifier = Modifier) {
     if (Skeu.on) return LeatherDesk(modifier)
+    if (Metro.on) return Box(modifier.fillMaxSize().background(DF.Bg))
     val t = rememberInfiniteTransition(label = "aurora")
     val a by t.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(36_000, easing = LinearEasing)), label = "a")
     Canvas(modifier.fillMaxSize()) {
@@ -186,7 +220,7 @@ fun DfChip(text: String, selected: Boolean, modifier: Modifier = Modifier, icon:
     val border by animateColorAsState(if (selected) DF.Primary else DF.Line, tween(260), label = "chipBorder")
     Row(
         modifier.pressScale(0.92f, onClick = onClick)
-            .then(if (!Skeu.on) Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape) else if (selected) Modifier.gel(CircleShape, DF.PrimaryStrong) else Modifier.leatherPanel(CircleShape, DF.SurfaceHigh, stitched = false, depth = 2.dp))
+            .then(if (Metro.on) Modifier.background(bg).border(2.dp, if (selected) DF.Primary else DF.Muted, RectangleShape) else if (!Skeu.on) Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape) else if (selected) Modifier.gel(CircleShape, DF.PrimaryStrong) else Modifier.leatherPanel(CircleShape, DF.SurfaceHigh, stitched = false, depth = 2.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -205,12 +239,13 @@ fun MintButton(
     danger: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = rounded(18.dp)
     val accent = if (danger) DF.Error else DF.Primary
     Row(
         modifier.pressScale(0.95f, onClick = onClick).clip(shape)
             .then(
-                if (Skeu.on) { if (filled) Modifier.gel(shape, if (danger) Color(0xFFB8402E) else DF.PrimaryStrong) else Modifier.leatherPanel(shape, DF.SurfaceHigh, stitched = false, depth = 2.5.dp) }
+                if (Metro.on) { if (filled) Modifier.background(accent) else Modifier.border(2.dp, DF.Text, shape) }
+                else if (Skeu.on) { if (filled) Modifier.gel(shape, if (danger) Color(0xFFB8402E) else DF.PrimaryStrong) else Modifier.leatherPanel(shape, DF.SurfaceHigh, stitched = false, depth = 2.5.dp) }
                 else if (filled) Modifier.background(Brush.linearGradient(listOf(accent, if (danger) Color(0xFFFF6B5B) else DF.PrimaryStrong)))
                 else Modifier.background(DF.Surface).border(1.dp, DF.LineStrong, shape),
             )
@@ -230,12 +265,12 @@ fun MintButton(
 @Composable
 fun CardSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(26.dp),
+    shape: Shape = rounded(26.dp),
     padding: PaddingValues = PaddingValues(18.dp),
     content: @Composable () -> Unit,
 ) {
     Box(
-        (if (Skeu.on) modifier.leatherPanel(shape) else modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape))
+        (if (Metro.on) modifier.background(DF.Surface) else if (Skeu.on) modifier.leatherPanel(shape) else modifier.clip(shape).background(Brush.verticalGradient(listOf(DF.SurfaceHigh, DF.Surface))).border(1.dp, DF.Line, shape))
             .padding(padding),
     ) { content() }
 }
@@ -244,7 +279,7 @@ fun CardSurface(
 fun Pill(text: String, modifier: Modifier = Modifier, color: Color = DF.Primary) {
     Text(
         text,
-        (if (Skeu.on) modifier.inset(CircleShape, Color.Black.copy(alpha = 0.35f)) else modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape))
+        (if (Metro.on) modifier.background(color.copy(alpha = 0.2f)) else if (Skeu.on) modifier.inset(CircleShape, Color.Black.copy(alpha = 0.35f)) else modifier.clip(CircleShape).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.32f), CircleShape))
             .padding(horizontal = 9.dp, vertical = 3.dp),
         style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
@@ -255,7 +290,7 @@ fun Pill(text: String, modifier: Modifier = Modifier, color: Color = DF.Primary)
 fun ScreenHeader(title: String, subtitle: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.displayMedium, color = DF.Text)
+            Text(if (Metro.on) title.lowercase() else title, style = MaterialTheme.typography.displayMedium, color = DF.Text, maxLines = if (Metro.on) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
             AnimatedContent(subtitle, transitionSpec = { (fadeIn(tween(220)) + slideInVertically { it / 2 }) togetherWith fadeOut(tween(150)) }, label = "sub") {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = DF.Muted)
             }
@@ -268,30 +303,33 @@ fun ScreenHeader(title: String, subtitle: String, modifier: Modifier = Modifier,
 fun RoundIconButton(icon: ImageVector, description: String, modifier: Modifier = Modifier, tint: Color = DF.Text, onClick: () -> Unit) {
     Box(
         modifier.pressScale(0.88f, onClick = onClick).size(44.dp)
-            .then(if (Skeu.on) Modifier.brass(CircleShape) else Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape)),
+            .then(if (Metro.on) Modifier.border(2.dp, DF.Text, CircleShape) else if (Skeu.on) Modifier.brass(CircleShape) else Modifier.clip(CircleShape).background(DF.Surface).border(1.dp, DF.Line, CircleShape)),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = if (Skeu.on) Color(0xFF3A2610) else tint, modifier = Modifier.size(21.dp)) }
 }
 
 @Composable
 fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = rounded(18.dp)
+    // Metro: casella chiara con testo scuro, come le TextBox di Windows Phone.
+    val text = if (Metro.on) Color.Black else DF.Text
+    val muted = if (Metro.on) Color(0xFF666666) else DF.Muted
     Row(
         modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            .then(if (Skeu.on) Modifier.inset(shape) else Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape))
+            .then(if (Metro.on) Modifier.background(Color(0xFFDDDDDD)) else if (Skeu.on) Modifier.inset(shape) else Modifier.clip(shape).background(DF.Surface).border(1.dp, DF.Line, shape))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Rounded.Search, null, tint = DF.Muted, modifier = Modifier.size(20.dp))
+        Icon(Icons.Rounded.Search, null, tint = muted, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = DF.Muted)
+            if (value.isEmpty()) Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = muted)
             BasicTextField(
                 value, onChange, singleLine = true, cursorBrush = SolidColor(DF.Primary),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = DF.Text), modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = text), modifier = Modifier.fillMaxWidth(),
             )
         }
-        if (value.isNotEmpty()) Icon(Icons.Rounded.Close, "Cancella", tint = DF.Muted, modifier = Modifier.size(20.dp).pressScale(0.8f) { onChange("") })
+        if (value.isNotEmpty()) Icon(Icons.Rounded.Close, "Cancella", tint = muted, modifier = Modifier.size(20.dp).pressScale(0.8f) { onChange("") })
     }
 }
 
@@ -300,11 +338,12 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, 
 fun SelectCheck(selected: Boolean, modifier: Modifier = Modifier) {
     val p by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow), label = "check")
     Box(modifier.size(26.dp), contentAlignment = Alignment.Center) {
-        if (Skeu.on) Box(Modifier.fillMaxSize().inset(CircleShape, Color.Black.copy(alpha = 0.4f)))
+        if (Metro.on) Box(Modifier.fillMaxSize().border(2.dp, if (selected) DF.Primary else DF.Text, RectangleShape))
+        else if (Skeu.on) Box(Modifier.fillMaxSize().inset(CircleShape, Color.Black.copy(alpha = 0.4f)))
         else Box(Modifier.fillMaxSize().clip(CircleShape).border(1.6.dp, if (selected) DF.Primary else DF.LineStrong, CircleShape))
         Box(
             Modifier.fillMaxSize().graphicsLayer { scaleX = p; scaleY = p; alpha = p.coerceIn(0f, 1f) }
-                .then(if (Skeu.on) Modifier.gel(CircleShape, DF.PrimaryStrong, 1.5.dp) else Modifier.clip(CircleShape).background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong)))),
+                .then(if (Metro.on) Modifier.background(DF.Primary) else if (Skeu.on) Modifier.gel(CircleShape, DF.PrimaryStrong, 1.5.dp) else Modifier.clip(CircleShape).background(Brush.linearGradient(listOf(DF.Primary, DF.PrimaryStrong)))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Rounded.Check, null, tint = DF.OnPrimary, modifier = Modifier.size(17.dp).graphicsLayer { rotationZ = (1f - p) * -40f }) }
     }
@@ -324,7 +363,7 @@ fun AnimatedNumber(text: String, style: androidx.compose.ui.text.TextStyle, colo
 @Composable
 fun AsyncBitmap(key: String, cached: ImageBitmap?, size: Dp, corner: Dp = size * 0.28f, fallback: String = "", load: suspend () -> ImageBitmap?) {
     val bitmap by produceState(cached, key) { if (value == null) value = load() }
-    val shape = RoundedCornerShape(corner)
+    val shape = rounded(corner)
     Box(Modifier.size(size).clip(shape), contentAlignment = Alignment.Center) {
         val b = bitmap
         if (b != null) Image(b, null, Modifier.fillMaxSize())
@@ -337,12 +376,15 @@ fun AsyncBitmap(key: String, cached: ImageBitmap?, size: Dp, corner: Dp = size *
 fun Monogram(name: String, size: Dp) {
     val hue = (abs(name.hashCode()) % 360).toFloat()
     Box(
-        Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.hsv(hue, 0.45f, 0.55f), Color.hsv((hue + 40f) % 360f, 0.6f, 0.25f)))),
+        Modifier.fillMaxSize().background(
+            if (Metro.on) SolidColor(MetroPalette[abs(name.hashCode()) % MetroPalette.size])
+            else Brush.linearGradient(listOf(Color.hsv(hue, 0.45f, 0.55f), Color.hsv((hue + 40f) % 360f, 0.6f, 0.25f))),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             name.trim().firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "#",
-            fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.44f).sp, color = DF.Text,
+            fontFamily = if (Metro.on) FontFamily.SansSerif else DisplayFont, fontWeight = if (Metro.on) FontWeight.Light else FontWeight.ExtraBold, fontSize = (size.value * 0.44f).sp, color = DF.Text,
         )
     }
 }
@@ -352,11 +394,17 @@ fun ConfirmDialog(title: String, text: String, confirm: String, danger: Boolean 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DF.SurfaceHigh,
-        shape = RoundedCornerShape(28.dp),
+        shape = rounded(28.dp),
         title = { Text(title, style = MaterialTheme.typography.headlineSmall, color = DF.Text) },
         text = { Text(text, style = MaterialTheme.typography.bodyMedium, color = DF.Muted) },
-        confirmButton = { TextButton(onClick = { onDismiss(); onConfirm() }) { Text(confirm, color = if (danger) DF.Error else DF.Primary, style = MaterialTheme.typography.labelLarge) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla", color = DF.Muted, style = MaterialTheme.typography.labelLarge) } },
+        confirmButton = {
+            if (Metro.on) MintButton(confirm.lowercase(), null, filled = false) { onDismiss(); onConfirm() }
+            else TextButton(onClick = { onDismiss(); onConfirm() }) { Text(confirm, color = if (danger) DF.Error else DF.Primary, style = MaterialTheme.typography.labelLarge) }
+        },
+        dismissButton = {
+            if (Metro.on) MintButton("annulla", null, filled = false, onClick = onDismiss)
+            else TextButton(onClick = onDismiss) { Text("Annulla", color = DF.Muted, style = MaterialTheme.typography.labelLarge) }
+        },
     )
 }
 
@@ -383,7 +431,7 @@ fun Category.icon(): ImageVector = when (this) {
 }
 
 /** Ogni categoria ha una tinta sua, sempre chiara e satura come l'accento. */
-fun Category.color(): Color = Color.hsv((152f + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
+fun Category.color(): Color = if (Metro.on) MetroPalette[ordinal % MetroPalette.size] else Color.hsv((152f + ordinal * 360f / Category.entries.size * 7) % 360f, 0.55f, 0.95f)
 
 // ---------- Formati ----------
 

@@ -62,6 +62,7 @@ import app.declutty.MainViewModel
 import app.declutty.data.ContactItem
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
 
 private enum class ContactFilter(val label: String) { ALL("Tutti"), DUPLICATES("Duplicati"), NO_NUMBER("Senza numero"), NO_NAME("Senza nome") }
 
@@ -219,11 +220,11 @@ private fun ContactAvatar(vm: MainViewModel, c: ContactItem, size: Dp) {
 private fun ContactRow(vm: MainViewModel, c: ContactItem, selected: Boolean, index: Int, modifier: Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) DF.Primary.copy(alpha = 0.12f) else Color.Transparent, tween(240), label = "bg")
     val border by animateColorAsState(if (selected) DF.Primary.copy(alpha = 0.4f) else Color.Transparent, tween(240), label = "border")
-    val shape = RoundedCornerShape(22.dp)
+    val shape = rounded(22.dp)
     Row(
         modifier.reveal(index).fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
             .pressScale(0.97f, onLongClick, onClick)
-            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, DF.Primary.copy(alpha = 0.5f)) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
+            .then(if (Skeu.on && selected) Modifier.leatherPanel(shape, DF.Primary.copy(alpha = 0.5f)) else if (Metro.on) Modifier.background(bg) else Modifier.clip(shape).background(bg).border(1.dp, border, shape))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

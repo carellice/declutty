@@ -117,4 +117,4 @@ fun Modifier.brass(shape: Shape): Modifier =
 
 /** Superficie generica: pannello in pelle nello stile skeu, fondo+bordo piatti altrimenti. */
 fun Modifier.panel(shape: Shape, bg: Color, border: Color, stitched: Boolean = true): Modifier =
-    if (Skeu.on) leatherPanel(shape, bg, stitched) else clip(shape).background(bg).border(1.dp, border, shape)
+    if (Skeu.on) leatherPanel(shape, bg, stitched) else if (app.declutty.ui.theme.Metro.on) clip(shape).background(bg) else clip(shape).background(bg).border(1.dp, border, shape)

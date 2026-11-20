@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -63,6 +64,7 @@ import app.declutty.data.Category
 import app.declutty.data.sorted
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.delay
 
@@ -86,7 +88,8 @@ fun HomeScreen(
         item { Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars)) }
         item {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Declutty", Modifier.weight(1f).reveal(0), style = MaterialTheme.typography.titleLarge, color = DF.Primary)
+                if (Metro.on) MetroAppTitle("Declutty", Modifier.weight(1f).reveal(0))
+                else Text("Declutty", Modifier.weight(1f).reveal(0), style = MaterialTheme.typography.titleLarge, color = DF.Primary)
                 RoundIconButton(Icons.Rounded.Settings, "Impostazioni", onClick = openSettings)
             }
         }
@@ -110,13 +113,13 @@ fun HomeScreen(
         }
 
         item {
-            Row(Modifier.padding(horizontal = 20.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.padding(horizontal = 20.dp, vertical = if (Metro.on) 4.dp else 6.dp), horizontalArrangement = Arrangement.spacedBy(if (Metro.on) 8.dp else 10.dp)) {
                 StatCard(Icons.Rounded.Apps, "${apps.size}", "App installate", 1, Modifier.weight(1f)) { openApps(true) }
                 StatCard(Icons.Rounded.Storage, formatSize(apps.sumOf { it.size }), "Spazio delle app", 2, Modifier.weight(1f)) { openApps(true) }
             }
         }
         item {
-            Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(if (Metro.on) 8.dp else 10.dp)) {
                 StatCard(Icons.Rounded.Bedtime, if (vm.usageAccess) "$unused" else "—", "Non usate da 30 giorni", 3, Modifier.weight(1f)) { openApps(false) }
                 StatCard(
                     Icons.Rounded.People, vm.contacts?.let { "${vm.duplicates.size}" } ?: "—",
@@ -126,7 +129,7 @@ fun HomeScreen(
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { p ->
             item {
-                Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(if (Metro.on) 8.dp else 10.dp)) {
                     StatCard(
                         Icons.Rounded.PhotoLibrary, p.groups?.size?.toString() ?: "—",
                         "Gruppi di foto simili", 5, Modifier.weight(1f), onClick = openPhotos,
@@ -198,8 +201,8 @@ private fun Hero(total: Int, unused: Int, usageAccess: Boolean) {
                 }
                 drawArc(DF.SurfaceHigher, 0f, 360f, false, style = Stroke(9.dp.toPx()))
                 drawArc(
-                    Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.Secondary, DF.PrimaryStrong)), -90f, 360f * ring.value, false,
-                    style = Stroke(9.dp.toPx(), cap = StrokeCap.Round),
+                    if (Metro.on) SolidColor(DF.Primary) else Brush.sweepGradient(listOf(DF.PrimaryStrong, DF.Primary, DF.Secondary, DF.PrimaryStrong)), -90f, 360f * ring.value, false,
+                    style = Stroke(9.dp.toPx(), cap = if (Metro.on) StrokeCap.Butt else StrokeCap.Round),
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -212,9 +215,10 @@ private fun Hero(total: Int, unused: Int, usageAccess: Boolean) {
 
 @Composable
 private fun StatCard(icon: ImageVector, value: String, label: String, index: Int, modifier: Modifier, onClick: () -> Unit) {
+    if (Metro.on) return LiveTile(icon, value, label.lowercase(), index, modifier.reveal(index), onClick = onClick)
     CardSurface(modifier.reveal(index).pressScale(0.95f, onClick = onClick), padding = PaddingValues(16.dp)) {
         Column {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(DF.Primary.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp).clip(rounded(12.dp)).background(DF.Primary.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = DF.Primary, modifier = Modifier.size(19.dp))
             }
             Spacer(Modifier.height(14.dp))
@@ -227,10 +231,10 @@ private fun StatCard(icon: ImageVector, value: String, label: String, index: Int
 @Composable
 private fun SectionTitle(title: String, action: String?, onAction: (() -> Unit)?) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, color = DF.Text)
+        Text(if (Metro.on) title.lowercase() else title, Modifier.weight(1f), style = if (Metro.on) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall, color = DF.Text)
         if (action != null && onAction != null) {
             Row(Modifier.pressScale(0.9f, onClick = onAction).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(action, style = MaterialTheme.typography.labelLarge, color = DF.Primary)
+                Text(if (Metro.on) action.lowercase() else action, style = MaterialTheme.typography.labelLarge, color = DF.Primary)
                 Spacer(Modifier.width(4.dp))
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = DF.Primary, modifier = Modifier.size(16.dp))
             }
@@ -248,8 +252,8 @@ private fun CategoryBar(category: Category, count: Int, max: Int, index: Int, on
         Modifier.reveal(index).fillMaxWidth().padding(horizontal = 20.dp, vertical = 5.dp).pressScale(0.97f, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(categoryBrush(category)), contentAlignment = Alignment.Center) {
-            Icon(category.icon(), null, tint = color, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).clip(rounded(12.dp)).background(categoryBrush(category)), contentAlignment = Alignment.Center) {
+            Icon(category.icon(), null, tint = if (Metro.on) Color.White else color, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -258,9 +262,9 @@ private fun CategoryBar(category: Category, count: Int, max: Int, index: Int, on
                 Text("$count", style = MaterialTheme.typography.labelLarge, color = color)
             }
             Spacer(Modifier.height(6.dp))
-            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(DF.SurfaceHigher)) {
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(rounded(3.dp)).background(DF.SurfaceHigher)) {
                 Box(
-                    Modifier.fillMaxWidth(p.value.coerceAtLeast(0.02f)).height(6.dp).clip(RoundedCornerShape(3.dp))
+                    Modifier.fillMaxWidth(p.value.coerceAtLeast(0.02f)).height(6.dp).clip(rounded(3.dp))
                         .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.6f), color))),
                 )
             }

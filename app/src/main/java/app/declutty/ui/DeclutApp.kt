@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -35,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +75,7 @@ import app.declutty.MainViewModel
 import app.declutty.data.Category
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
 import app.declutty.ui.theme.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -129,6 +132,9 @@ fun DeclutApp(vm: MainViewModel) {
                 val (fromPage, fromTab) = initialState
                 val (toPage, toTab) = targetState
                 when {
+                    // Metro: la rotazione turnstile la fa il contenuto, qui resta solo la dissolvenza a tempo.
+                    Metro.on && toPage.depth() != fromPage.depth() ->
+                        fadeIn(tween(200, delayMillis = 160)) togetherWith fadeOut(tween(200))
                     toPage.depth() > fromPage.depth() ->
                         (slideInHorizontally(tween(420, easing = Motion.Reveal)) { it / 3 } + fadeIn(tween(300))) togetherWith
                             (fadeOut(tween(200)) + scaleOut(tween(300), 0.94f))
@@ -144,6 +150,7 @@ fun DeclutApp(vm: MainViewModel) {
             },
             label = "screens",
         ) { (p, t) ->
+            Box(turnstile()) {
             when (p) {
                 is Page.CategoryApps -> CategoryAppsScreen(vm, p.category) { page = null }
                 Page.Settings -> SettingsScreen(vm, onHidden = { page = Page.Hidden }, onPhotos = { page = Page.PhotoSettings(true) }) { page = null }
@@ -172,6 +179,7 @@ fun DeclutApp(vm: MainViewModel) {
                     Tab.CONTACTS -> ContactsScreen(vm)
                 }
             }
+            }
         }
 
         AnimatedVisibility(
@@ -191,14 +199,15 @@ fun DeclutApp(vm: MainViewModel) {
 
 @Composable
 private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
-    val shape = RoundedCornerShape(30.dp)
+    if (Metro.on) return MetroAppBar(selected, onSelect)
+    val shape = rounded(30.dp)
     BoxWithConstraints(
         Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)
             .panel(shape, DF.Nav, DF.Line).padding(6.dp),
     ) {
         val itemWidth = maxWidth / Tab.entries.size
         val x by animateDpAsState(itemWidth * selected.ordinal, spring(dampingRatio = 0.72f, stiffness = 420f), label = "navX")
-        val pill = RoundedCornerShape(24.dp)
+        val pill = rounded(24.dp)
         Box(
             Modifier.offset(x = x).width(itemWidth).height(58.dp).then(
                 if (Skeu.on) Modifier.inset(pill, Color.Black.copy(alpha = 0.45f))
@@ -224,6 +233,24 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
     }
 }
 
+/** Application bar di Windows Phone: fascia piena, icone dentro cerchi, etichette minuscole. */
+@Composable
+private fun MetroAppBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    Row(Modifier.fillMaxWidth().background(DF.Nav).navigationBarsPadding().padding(top = 10.dp, bottom = 8.dp)) {
+        Tab.entries.forEach { t ->
+            val active = t == selected
+            val fill by animateColorAsState(if (active) DF.Text else Color.Transparent, tween(160), label = "fill")
+            Column(Modifier.weight(1f).pressScale { onSelect(t) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(fill).border(2.dp, DF.Text, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(t.icon, t.label, tint = if (active) DF.Bg else DF.Text, modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(t.label.lowercase(), style = MaterialTheme.typography.labelSmall, color = if (active) DF.Text else DF.Muted, maxLines = 1)
+            }
+        }
+    }
+}
+
 // ---------- Messaggi brevi ----------
 
 @Composable
@@ -231,6 +258,21 @@ private fun Toast(text: String?, modifier: Modifier, onDone: () -> Unit) {
     LaunchedEffect(text) { if (text != null) { delay(2400); onDone() } }
     var last by remember { mutableStateOf("") }
     if (text != null) last = text
+    if (Metro.on) {
+        // Toast di Windows Phone: fascia accento a tutta larghezza che scende dall'alto.
+        AnimatedVisibility(
+            text != null, modifier,
+            enter = slideInVertically(tween(260, easing = Motion.Reveal)) { -it },
+            exit = slideOutVertically(tween(200)) { -it },
+        ) {
+            Text(
+                last,
+                Modifier.fillMaxWidth().background(DF.Primary).statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.titleSmall, color = DF.OnPrimary,
+            )
+        }
+        return
+    }
     AnimatedVisibility(
         text != null, modifier.padding(top = 52.dp),
         enter = slideInVertically(spring(0.6f, 380f)) { -it * 2 } + fadeIn(),

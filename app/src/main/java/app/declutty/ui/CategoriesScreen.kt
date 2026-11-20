@@ -41,6 +41,8 @@ import app.declutty.data.AppItem
 import app.declutty.data.Category
 import app.declutty.ui.theme.DF
 import app.declutty.ui.theme.Skeu
+import app.declutty.ui.theme.Metro
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun CategoriesScreen(vm: MainViewModel, open: (Category) -> Unit) {
@@ -56,8 +58,8 @@ fun CategoriesScreen(vm: MainViewModel, open: (Category) -> Unit) {
         GridCells.Fixed(2),
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = TabBarSpace + 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (Metro.on) 8.dp else 10.dp),
+        verticalArrangement = Arrangement.spacedBy(if (Metro.on) 8.dp else 10.dp),
     ) {
         item(span = { GridItemSpan(2) }) {
             Column {
@@ -77,7 +79,7 @@ fun CategoriesScreen(vm: MainViewModel, open: (Category) -> Unit) {
             }
         }
         if (vm.appsLoading) {
-            items(6) { Box(Modifier.height(150.dp).clip(RoundedCornerShape(26.dp)).shimmer()) }
+            items(6) { Box(Modifier.height(150.dp).clip(rounded(26.dp)).shimmer()) }
         } else {
             itemsIndexed(groups, key = { _, g -> g.first.name }) { i, (category, apps) ->
                 CategoryCard(vm, category, apps, Modifier.animateItem().reveal(i)) { open(category) }
@@ -95,11 +97,15 @@ fun CategoriesScreen(vm: MainViewModel, open: (Category) -> Unit) {
 @Composable
 private fun CategoryCard(vm: MainViewModel, category: Category, apps: List<AppItem>, modifier: Modifier, onClick: () -> Unit) {
     val color = category.color()
-    val shape = RoundedCornerShape(26.dp)
+    val shape = rounded(26.dp)
+    // Metro: piastrella piena nel colore della categoria, tutto in bianco sopra.
+    val tile = Metro.on
+    val fg = if (tile) Color.White else color
     Column(
         modifier.pressScale(0.95f, onClick = onClick)
             .then(
-                if (Skeu.on) Modifier.leatherPanel(shape, androidx.compose.ui.graphics.lerp(DF.Surface, color, 0.22f))
+                if (tile) Modifier.background(color)
+                else if (Skeu.on) Modifier.leatherPanel(shape, androidx.compose.ui.graphics.lerp(DF.Surface, color, 0.22f))
                 else Modifier.clip(shape)
                     .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(color.copy(alpha = 0.16f), DF.Surface)))
                     .border(1.dp, color.copy(alpha = 0.26f), shape),
@@ -107,21 +113,22 @@ private fun CategoryCard(vm: MainViewModel, category: Category, apps: List<AppIt
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(categoryBrush(category)), contentAlignment = Alignment.Center) {
+            if (tile) Icon(category.icon(), null, tint = fg, modifier = Modifier.size(30.dp))
+            else Box(Modifier.size(42.dp).clip(rounded(14.dp)).background(categoryBrush(category)), contentAlignment = Alignment.Center) {
                 Icon(category.icon(), null, tint = color, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.weight(1f))
-            AnimatedNumber("${apps.size}", MaterialTheme.typography.headlineMedium, color)
+            AnimatedNumber("${apps.size}", if (tile) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, fg)
         }
         Spacer(Modifier.height(14.dp))
-        Text(category.title, style = MaterialTheme.typography.titleMedium, color = DF.Text, maxLines = 1)
-        Text(formatSize(apps.sumOf { it.size }), style = MaterialTheme.typography.bodySmall, color = DF.Muted)
+        Text(if (tile) category.title.lowercase() else category.title, style = MaterialTheme.typography.titleMedium, color = if (tile) fg else DF.Text, maxLines = 1)
+        Text(formatSize(apps.sumOf { it.size }), style = MaterialTheme.typography.bodySmall, color = if (tile) fg.copy(alpha = 0.8f) else DF.Muted)
         Spacer(Modifier.height(12.dp))
         // Le prime icone sovrapposte come un piccolo mazzo di carte.
         Row {
             apps.sortedByDescending { it.lastUsed ?: it.updated }.take(4).forEachIndexed { i, app ->
                 Box(
-                    Modifier.offset(x = (-8 * i).dp).size(28.dp).clip(RoundedCornerShape(9.dp)).border(1.5.dp, DF.Surface, RoundedCornerShape(9.dp)),
+                    Modifier.offset(x = (-8 * i).dp).size(28.dp).clip(rounded(9.dp)).border(1.5.dp, if (tile) color else DF.Surface, rounded(9.dp)),
                 ) { AsyncBitmap(app.pkg, vm.apps.cachedIcon(app.pkg), 28.dp, fallback = app.label) { vm.apps.icon(app.pkg) } }
             }
             if (apps.size > 4) {
