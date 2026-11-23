@@ -116,6 +116,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
@@ -463,6 +464,8 @@ private fun GroupCard(
 ) {
     val haptics = LocalHapticFeedback.current
     val selected = group.members.count { it.photo.id in toDelete }
+    // Tutte grandi uguali, quasi due per schermata con la successiva che spunta: si sceglie già scorrendo l'elenco, senza aprire il gruppo.
+    val thumb = ((LocalConfiguration.current.screenWidthDp - 80) / 1.8f).dp
     CardSurface(modifier.reveal(index).fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp), padding = PaddingValues(vertical = 14.dp)) {
         Column {
             Row(Modifier.fillMaxWidth().pressScale(0.97f, onClick = onOpen).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -484,7 +487,7 @@ private fun GroupCard(
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(group.members, key = { _, m -> m.photo.id }) { i, m ->
                     SelectableThumb(
-                        m.photo, m.photo.id == group.bestId, m.photo.id in toDelete, if (m.photo.id == group.bestId) 116.dp else 92.dp,
+                        m.photo, m.photo.id == group.bestId, m.photo.id in toDelete, thumb,
                         onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onPreview(i) },
                     ) { onToggle(m.photo.id) }
                 }
@@ -501,7 +504,7 @@ private fun SelectableThumb(photo: Photo, isBest: Boolean, marked: Boolean, size
     val border by animateColorAsState(if (isBest) DF.Primary else if (marked) DF.Error else DF.Line, tween(240), label = "border")
     val scale by animateFloatAsState(if (marked) 0.92f else 1f, spring(0.5f, 400f), label = "scale")
     Box(Modifier.size(size).graphicsLayer { scaleX = scale; scaleY = scale }.pressScale(0.92f, onLongClick, onClick).clip(shape).border(2.dp, border, shape)) {
-        PhotoImage(photo, 320, Modifier.fillMaxSize())
+        PhotoImage(photo, if (size > 100.dp) 512 else 320, Modifier.fillMaxSize())
         AnimatedVisibility(marked, enter = fadeIn(), exit = fadeOut()) { Box(Modifier.fillMaxSize().background(DF.Error.copy(alpha = 0.26f))) }
         when {
             isBest && size < 80.dp -> Box(
