@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,6 +125,8 @@ fun DeclutApp(vm: MainViewModel) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var page by remember { mutableStateOf<Page?>(null) }
     var unusedFilter by remember { mutableStateOf(false) }
+    // Fuori dalle schermate: tornando da un gruppo la lista foto riprende da dove era.
+    val photoList = rememberLazyListState()
     LifecycleResumeEffect(Unit) { vm.onResume(); onPauseOrDispose { } }
 
     BackHandler(page != null || tab != Tab.HOME) {
@@ -186,7 +189,7 @@ fun DeclutApp(vm: MainViewModel) {
                     Tab.PHOTOS -> {
                         val photos = vm.photos
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && photos != null) {
-                            PhotosScreen(photos, openGroup = { page = Page.PhotoGroup(it) }, openSettings = { page = Page.PhotoSettings(false) })
+                            PhotosScreen(photos, photoList, openGroup = { page = Page.PhotoGroup(it) }, openSettings = { page = Page.PhotoSettings(false) })
                         } else PhotosUnsupported()
                     }
                     Tab.CONTACTS -> ContactsScreen(vm)

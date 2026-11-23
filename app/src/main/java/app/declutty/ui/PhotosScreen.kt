@@ -56,6 +56,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -190,7 +191,7 @@ fun PhotosUnsupported() {
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun PhotosScreen(p: PhotoCleaner, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
+fun PhotosScreen(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
     var access by remember { mutableStateOf(p.hasAccess()) }
     var denied by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) { access = p.hasAccess(); onPauseOrDispose { } }
@@ -215,7 +216,7 @@ fun PhotosScreen(p: PhotoCleaner, openGroup: (Long) -> Unit, openSettings: () ->
             }
             1 -> ScanView(p)
             2 -> PhotosIntro(p, openSettings)
-            else -> PhotoResults(p, openGroup, openSettings)
+            else -> PhotoResults(p, listState, openGroup, openSettings)
         }
     }
 }
@@ -370,7 +371,7 @@ private fun ScanView(p: PhotoCleaner) {
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-private fun PhotoResults(p: PhotoCleaner, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
+private fun PhotoResults(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
     val groups = p.groups.orEmpty()
     val count = p.toDelete.size
     val bytes = p.toDeleteBytes
@@ -381,7 +382,7 @@ private fun PhotoResults(p: PhotoCleaner, openGroup: (Long) -> Unit, openSetting
     }
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = TabBarSpace + 120.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), listState, contentPadding = PaddingValues(bottom = TabBarSpace + 120.dp)) {
             item { Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars)) }
             item {
                 Column(Modifier.padding(top = 12.dp)) {
@@ -544,7 +545,8 @@ fun PhotoGroupScreen(p: PhotoCleaner, groupId: Long, onBack: () -> Unit) {
     val pager = rememberPagerState { group.members.size }
     val strip = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    var viewer by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    var viewer by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(pager.currentPage) { strip.animateScrollToItem(pager.currentPage) }
     val current = group.members[pager.currentPage.coerceIn(0, group.members.lastIndex)]
     val isBest = current.photo.id == group.bestId
@@ -562,7 +564,7 @@ fun PhotoGroupScreen(p: PhotoCleaner, groupId: Long, onBack: () -> Unit) {
         }
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 20.dp), pageSpacing = 12.dp) { page ->
             val m = group.members[page]
-            Box(Modifier.fillMaxSize().clip(rounded(28.dp)).background(DF.Surface).border(1.dp, DF.Line, rounded(28.dp)).clickable { viewer = true }) {
+            Box(Modifier.fillMaxSize().clip(rounded(28.dp)).background(DF.Surface).border(1.dp, DF.Line, rounded(28.dp)).clickable { viewer = page }) {
                 PhotoImage(m.photo, 1600, Modifier.fillMaxSize(), ContentScale.Fit)
                 Row(Modifier.align(Alignment.TopStart).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (m.photo.id == group.bestId) PhotoBadge(Icons.Rounded.WorkspacePremium, "Da tenere", DF.Primary)
@@ -586,7 +588,10 @@ fun PhotoGroupScreen(p: PhotoCleaner, groupId: Long, onBack: () -> Unit) {
         }
         LazyRow(state = strip, contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(group.members, key = { _, m -> m.photo.id }) { i, m ->
-                SelectableThumb(m.photo, m.photo.id == group.bestId, m.photo.id in p.toDelete, 64.dp) { scope.launch { pager.animateScrollToPage(i) } }
+                SelectableThumb(
+                    m.photo, m.photo.id == group.bestId, m.photo.id in p.toDelete, 64.dp,
+                    onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewer = i },
+                ) { scope.launch { pager.animateScrollToPage(i) } }
             }
         }
         Row(Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -598,10 +603,10 @@ fun PhotoGroupScreen(p: PhotoCleaner, groupId: Long, onBack: () -> Unit) {
         }
     }
 
-    if (viewer) PhotoViewer(group, pager.currentPage, p.toDelete, p::toggle) { page ->
-        viewer = false
+    viewer?.let { start -> PhotoViewer(group, start, p.toDelete, p::toggle) { page ->
+        viewer = null
         scope.launch { pager.scrollToPage(page) }
-    }
+    } }
 }
 
 // ---------- Schermo intero ----------
