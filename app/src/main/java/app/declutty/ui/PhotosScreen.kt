@@ -81,6 +81,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestoreFromTrash
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Icon
@@ -192,7 +193,7 @@ fun PhotosUnsupported() {
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun PhotosScreen(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
+fun PhotosScreen(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit, openSwipe: () -> Unit) {
     var access by remember { mutableStateOf(p.hasAccess()) }
     var denied by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) { access = p.hasAccess(); onPauseOrDispose { } }
@@ -216,8 +217,8 @@ fun PhotosScreen(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) ->
                 } else permission.launch(p.permissions())
             }
             1 -> ScanView(p)
-            2 -> PhotosIntro(p, openSettings)
-            else -> PhotoResults(p, listState, openGroup, openSettings)
+            2 -> PhotosIntro(p, openSettings, openSwipe)
+            else -> PhotoResults(p, listState, openGroup, openSettings, openSwipe)
         }
     }
 }
@@ -249,7 +250,7 @@ private fun PhotoPermission(denied: Boolean, onGrant: () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-private fun PhotosIntro(p: PhotoCleaner, openSettings: () -> Unit) {
+private fun PhotosIntro(p: PhotoCleaner, openSettings: () -> Unit, openSwipe: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = TabBarSpace + 24.dp)) {
         item { Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars)) }
         item {
@@ -298,6 +299,10 @@ private fun PhotosIntro(p: PhotoCleaner, openSettings: () -> Unit) {
         }
         item {
             MintButton("Avvia scansione", Icons.Rounded.AutoAwesome, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).reveal(5)) { p.startScan() }
+        }
+        item {
+            // Non serve la scansione: scorre tutta la galleria, foto per foto.
+            MintButton("Scorri e scegli", Icons.Rounded.Swipe, Modifier.fillMaxWidth().padding(horizontal = 20.dp).reveal(5), filled = false, onClick = openSwipe)
         }
         item {
             Row(Modifier.padding(horizontal = 24.dp, vertical = 8.dp).reveal(6), verticalAlignment = Alignment.CenterVertically) {
@@ -372,7 +377,7 @@ private fun ScanView(p: PhotoCleaner) {
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-private fun PhotoResults(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit) {
+private fun PhotoResults(p: PhotoCleaner, listState: LazyListState, openGroup: (Long) -> Unit, openSettings: () -> Unit, openSwipe: () -> Unit) {
     val groups = p.groups.orEmpty()
     val count = p.toDelete.size
     val bytes = p.toDeleteBytes
@@ -395,6 +400,7 @@ private fun PhotoResults(p: PhotoCleaner, listState: LazyListState, openGroup: (
                     Spacer(Modifier.height(14.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { DfChip("Rianalizza", false, icon = Icons.Rounded.Refresh) { p.startScan() } }
+                        item { DfChip("Scorri e scegli", false, icon = Icons.Rounded.Swipe, onClick = openSwipe) }
                         if (groups.isNotEmpty()) item {
                             DfChip(if (count == 0) "Seleziona tutte" else "Deseleziona", false, icon = Icons.Rounded.DoneAll) { p.selectAll(count == 0) }
                         }

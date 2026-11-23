@@ -58,6 +58,9 @@ class PhotoCleaner(private val app: Application, private val scope: CoroutineSco
     var toDelete by mutableStateOf(emptySet<Long>()); private set
     var lastDelete by mutableStateOf<PhotoDeleteSummary?>(null)
 
+    /** Scorri e scegli su tutta la galleria; quello che elimina sparisce anche dai gruppi. */
+    val swiper = PhotoSwiper(app, scope, { settings.deleteMode }) { ids, bytes -> forget(ids, bytes) }
+
     private var analyzed: List<AnalyzedPhoto>? = null
     private var scanJob: Job? = null
     private var pendingDelete: List<Long> = emptyList()
@@ -195,8 +198,14 @@ class PhotoCleaner(private val app: Application, private val scope: CoroutineSco
         val ids = pendingDelete.toSet()
         pendingDelete = emptyList()
         if (!confirmed || ids.isEmpty()) return
+        val bytes = groups.orEmpty().flatMap { it.members }.filter { it.photo.id in ids }.sumOf { it.photo.sizeBytes }
+        forget(ids, bytes)
+        lastDelete = PhotoDeleteSummary(ids.size, bytes)
+    }
+
+    /** Foto eliminate (da qui o dallo scorri e scegli): via da memoria, gruppi e conteggi. */
+    private fun forget(ids: Set<Long>, bytes: Long) {
         val list = groups.orEmpty()
-        val bytes = list.flatMap { it.members }.filter { it.photo.id in ids }.sumOf { it.photo.sizeBytes }
         freedBytes = (freedBytes + bytes).also { store.freedBytes = it }
         scope.launch(Dispatchers.IO) { cache.remove(ids) }
         analyzed = analyzed?.filter { it.photo.id !in ids }
@@ -207,6 +216,5 @@ class PhotoCleaner(private val app: Application, private val scope: CoroutineSco
         }
         toDelete = toDelete - ids
         galleryCount = galleryCount?.minus(ids.size)
-        lastDelete = PhotoDeleteSummary(ids.size, bytes)
     }
 }

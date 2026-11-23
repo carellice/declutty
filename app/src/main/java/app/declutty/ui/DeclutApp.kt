@@ -110,6 +110,7 @@ sealed interface Page {
     data object Hidden : Page
     data class PhotoGroup(val id: Long) : Page
     data class PhotoSettings(val fromSettings: Boolean) : Page
+    data object PhotoSwipe : Page
 }
 
 /** Profondità di una schermata: decide se la transizione va avanti o indietro. */
@@ -172,6 +173,7 @@ fun DeclutApp(vm: MainViewModel) {
                 Page.Settings -> SettingsScreen(vm, onHidden = { page = Page.Hidden }, onPhotos = { page = Page.PhotoSettings(true) }) { page = null }
                 Page.Hidden -> HiddenScreen(vm) { page = Page.Settings }
                 is Page.PhotoGroup -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { PhotoGroupScreen(it, p.id) { page = null } }
+                Page.PhotoSwipe -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let { PhotoSwipeScreen(it) { page = null } }
                 is Page.PhotoSettings -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) vm.photos?.let {
                     PhotoSettingsScreen(it) { page = if (p.fromSettings) Page.Settings else null }
                 }
@@ -189,7 +191,7 @@ fun DeclutApp(vm: MainViewModel) {
                     Tab.PHOTOS -> {
                         val photos = vm.photos
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && photos != null) {
-                            PhotosScreen(photos, photoList, openGroup = { page = Page.PhotoGroup(it) }, openSettings = { page = Page.PhotoSettings(false) })
+                            PhotosScreen(photos, photoList, openGroup = { page = Page.PhotoGroup(it) }, openSettings = { page = Page.PhotoSettings(false) }, openSwipe = { page = Page.PhotoSwipe })
                         } else PhotosUnsupported()
                     }
                     Tab.CONTACTS -> ContactsScreen(vm)
